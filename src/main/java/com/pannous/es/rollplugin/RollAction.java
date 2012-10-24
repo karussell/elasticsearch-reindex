@@ -29,20 +29,20 @@ import org.elasticsearch.rest.RestRequest;
 /**
  * @see issue 1500 https://github.com/elasticsearch/elasticsearch/issues/1500
  *
+ * Only indices with the rolling alias are involved into rolling.
  * @author Peter Karich
  */
 public class RollAction extends BaseRestHandler {
 
-    private static final String simpleDateString = "yyyy-MM-dd-HH-mm-ss";
     private XContentBuilder createIndexSettings;
     // TODO make complete createIndexSettings configurable
     private int createIndexShards = 2;
     private int createIndexReplicas = 2;
     private boolean deleteAfterRoll = true;
-    private String feedEnd = "_feed";
-    private String searchEnd = "_feed";
+    private String feedEnd = "feed";
+    private String searchEnd = "search";
     // helper index
-    private String rollEnd = "_roll";
+    private String rollEnd = "roll";
 
     @Inject public RollAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
@@ -57,12 +57,11 @@ public class RollAction extends BaseRestHandler {
     }
 
     public DateTimeFormatter createFormatter() {
-        return DateTimeFormat.forPattern(simpleDateString);
+        return DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm-ss");
     }
 
     public String rollIndex(String indexName, int maxRollIndices, int maxSearchIndices) {
         String rollAlias = getRoll(indexName);
-
         DateTimeFormatter formatter = createFormatter();
         if (maxRollIndices < 1 || maxSearchIndices < 1)
             throw new RuntimeException("remaining indices, search indices and feeding indices must be at least 1");
@@ -89,18 +88,18 @@ public class RollAction extends BaseRestHandler {
             for (String index : concreteIndices) {
                 int pos = index.indexOf("_");
                 if (pos < 0)
-                    throw new IllegalStateException("index " + index + " is not in the format " + simpleDateString);
+                    throw new IllegalStateException("index " + index + " is not in the format " + formatter);
 
                 String indexDateStr = index.substring(pos + 1);
                 Long timeLong;
                 try {
                     timeLong = formatter.parseMillis(indexDateStr);
                 } catch (Exception ex) {
-                    throw new IllegalStateException("index " + index + " is not in the format " + simpleDateString + " error:" + ex.getMessage());
+                    throw new IllegalStateException("index " + index + " is not in the format " + formatter + " error:" + ex.getMessage());
                 }
                 String old = sortedIndices.put(timeLong, index);
                 if (old != null)
-                    throw new IllegalStateException("indices with the identical date are not supported " + old + " vs. " + index);
+                    throw new IllegalStateException("Indices with the identical date are not supported! " + old + " vs. " + index);
             }
             int counter = 1;
             Iterator<String> indexIter = sortedIndices.values().iterator();
@@ -198,14 +197,14 @@ public class RollAction extends BaseRestHandler {
     }
 
     String getRoll(String indexName) {
-        return indexName + rollEnd;
+        return indexName + "_" + rollEnd;
     }
 
     String getFeed(String indexName) {
-        return indexName + feedEnd;
+        return indexName + "_" + feedEnd;
     }
 
     String getSearch(String indexName) {
-        return indexName + searchEnd;
+        return indexName + "_" + searchEnd;
     }
 }
