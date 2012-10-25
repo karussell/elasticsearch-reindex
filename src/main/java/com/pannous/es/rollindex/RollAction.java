@@ -265,10 +265,14 @@ public class RollAction extends BaseRestHandler {
     }
 
     String getFeed(String indexName) {
+        if (feedEnd.isEmpty())
+            return indexName;
         return indexName + "_" + feedEnd;
     }
 
     String getSearch(String indexName) {
+        if (searchEnd.isEmpty())
+            return indexName;
         return indexName + "_" + searchEnd;
     }
 }
