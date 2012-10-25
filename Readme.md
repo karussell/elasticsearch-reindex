@@ -2,7 +2,9 @@
 
 > mvn -DskipTests clean package
 
-> sudo $ES_HOME/bin/plugin -url ./target -install rollindex
+> sudo $ES_HOME/bin/plugin install karussell/elasticsearch-rollindex
+
+> // or the local one: sudo $ES_HOME/bin/plugin -url ./target -install rollindex
 
 > sudo service elasticsearch restart
 
