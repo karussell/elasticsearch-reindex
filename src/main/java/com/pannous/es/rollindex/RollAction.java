@@ -150,18 +150,21 @@ public class RollAction extends BaseRestHandler {
             // Map<String, String> indexToConcrete = new HashMap<String, String>();
             String[] concreteIndices = getConcreteIndices(allRollingAliases.keySet());
             logger.info("aliases:{}, indices:{}", allRollingAliases, Arrays.toString(concreteIndices));
-            for (String index : concreteIndices) {
+            // if we cannot parse the time from the index name we just treat them as old indices of time == 0
+            long timeFake = 0;
+            for (String index : concreteIndices) {                
+                long timeLong = timeFake++;
                 int pos = index.indexOf("_");
-                if (pos < 0)
-                    throw new IllegalStateException("index " + index + " is not in the format " + formatter);
+                if (pos >= 0) {
+                    String indexDateStr = index.substring(pos + 1);
+                    try {
+                        timeLong = formatter.parseMillis(indexDateStr);
+                    } catch (Exception ex) {
+                        logger.error("index " + index + " is not in the format " + formatter + " error:" + ex.getMessage());
+                    }
+                } else
+                    logger.error("index " + index + " is not in the format " + formatter);
 
-                String indexDateStr = index.substring(pos + 1);
-                Long timeLong;
-                try {
-                    timeLong = formatter.parseMillis(indexDateStr);
-                } catch (Exception ex) {
-                    throw new IllegalStateException("index " + index + " is not in the format " + formatter + " error:" + ex.getMessage());
-                }
                 String old = sortedIndices.put(timeLong, index);
                 if (old != null)
                     throw new IllegalStateException("Indices with the identical date are not supported! " + old + " vs. " + index);
