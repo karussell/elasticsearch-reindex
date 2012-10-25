@@ -146,9 +146,11 @@ public class RollAction extends BaseRestHandler {
         if (allRollingAliases.isEmpty()) {
             // do nothing for now
         } else {
+            // latest indices comes first
             TreeMap<Long, String> sortedIndices = new TreeMap<Long, String>(reverseSorter);
             // Map<String, String> indexToConcrete = new HashMap<String, String>();
             String[] concreteIndices = getConcreteIndices(allRollingAliases.keySet());
+            Arrays.sort(concreteIndices);
             logger.info("aliases:{}, indices:{}", allRollingAliases, Arrays.toString(concreteIndices));
             // if we cannot parse the time from the index name we just treat them as old indices of time == 0
             long timeFake = 0;
@@ -247,9 +249,9 @@ public class RollAction extends BaseRestHandler {
                 removeAlias(oldIndexName, alias)).actionGet();
     }
 
-    public Map<String, AliasMetaData> getAliases(String index) {
+    public Map<String, AliasMetaData> getAliases(String alias) {
         Map<String, AliasMetaData> md = client.admin().cluster().state(new ClusterStateRequest()).
-                actionGet().getState().getMetaData().aliases().get(index);
+                actionGet().getState().getMetaData().aliases().get(alias);
         if (md == null)
             return Collections.emptyMap();
 

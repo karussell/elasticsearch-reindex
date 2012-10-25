@@ -1,6 +1,7 @@
 package com.pannous.es.rollindex;
 
 import java.util.Map;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.joda.time.format.DateTimeFormat;
@@ -32,7 +33,7 @@ public class RollActionTests extends AbstractNodesTests {
     protected Client getClient() {
         return client("node1");
     }
-    
+
     public void deleteAll() {
         // TODO is client null in @BeforeTest?
         client.admin().indices().delete(new DeleteIndexRequest()).actionGet();
@@ -110,5 +111,26 @@ public class RollActionTests extends AbstractNodesTests {
         result = action.rollIndex("tweets", 2, 1);
         assertThat(((String) result.get("deleted")), isEmptyString());
         assertThat(((String) result.get("closed")), equalTo(newIndex));
+    }
+
+    @Test public void incompatibleDateFormatShouldComeLast() throws Exception {
+        deleteAll();
+        Settings emptySettings = ImmutableSettings.settingsBuilder().build();
+        RollAction action = new RollAction(emptySettings, client, new RestController(emptySettings)) {
+            @Override public DateTimeFormatter createFormatter() {
+                // use millisecond change for test
+                return DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm-ss-S");
+            }
+        };
+        client.admin().indices().create(new CreateIndexRequest("whateverindex-1")).actionGet();
+        action.addAlias("whateverindex-1", action.getFeed("tweets"));
+        action.addAlias("whateverindex-1", action.getSearch("tweets"));
+        action.addAlias("whateverindex-1", action.getRoll("tweets"));
+
+        Map<String, Object> res = action.rollIndex("tweets", 2, 1);
+        
+        assertThat(action.getAliases(action.getRoll("tweets")).size(), equalTo(2));
+        assertThat(action.getAliases(action.getSearch("tweets")).size(), equalTo(1));
+        assertThat(action.getAliases(action.getFeed("tweets")).size(), equalTo(1));
     }
 }
