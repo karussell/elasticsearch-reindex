@@ -26,8 +26,7 @@ Call the command several times and you get a feeling of what it does.
 Then create a cron job which calls it with the periodic you like. But of course you can even
 call it manually in aperiodic cycles.
 
-See the source code to change index creation settings or if you want to delete the indices after
-leaving the roll alias
+To change the index creation settings just specify them in the request body. For other settings have a look in the source.
 
 # FAQ
 
