@@ -15,17 +15,15 @@ import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.close.CloseIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.joda.time.format.DateTimeFormat;
 import org.elasticsearch.common.joda.time.format.DateTimeFormatter;
+import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestChannel;
@@ -45,7 +43,6 @@ import static org.elasticsearch.rest.action.support.RestXContentBuilder.*;
  */
 public class RollAction extends BaseRestHandler {
 
-    private XContentBuilder createIndexSettings;
     private String feedEnd = "feed";
     private String searchEnd = "search";
     // helper index
@@ -54,9 +51,9 @@ public class RollAction extends BaseRestHandler {
     @Inject public RollAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
 
-        // Define REST endpoints to do a roll further and to change the create-index-settings!
-        // TODO how to register for every index?
-        controller.registerHandler(PUT, "/_rollindex", this);
+        // Define REST endpoints to do a roll further and to change the create-index-settings!        
+        controller.registerHandler(PUT, "/{index}/_rollindex", this);
+        controller.registerHandler(POST, "/{index}/_rollindex", this);
         logger.info("RollAction constructor [{}]", settings.toString());
     }
 
@@ -65,15 +62,6 @@ public class RollAction extends BaseRestHandler {
         try {
             XContentBuilder builder = restContentBuilder(request);
             String indexName = request.param("index", "");
-            request.hasContent();
-            if (indexName.trim().isEmpty()) {
-                builder.startObject()
-                        .field(new XContentBuilderString("error"), "index not found")
-                        .endObject();
-                channel.sendResponse(new XContentRestResponse(request, NOT_FOUND, builder));
-                return;
-            }
-
             int searchIndices = request.paramAsInt("searchIndices", 1);
             int rollIndices = request.paramAsInt("rollIndices", 1);
             boolean deleteAfterRoll = request.paramAsBoolean("deleteAfterRoll", false);
@@ -82,15 +70,14 @@ public class RollAction extends BaseRestHandler {
             int newIndexReplicas = request.paramAsInt("newIndexReplicas", 1);
             String newIndexRefresh = request.param("newIndexRefresh", "10s");
 
-            CreateIndexRequest createReq;
+            CreateIndexRequest req;
             if (request.hasContent())
-                createReq = new CreateIndexRequest(indexName).
-                        settings(request.contentAsString());
+                req = new CreateIndexRequest("").source(request.contentAsString());
             else
-                createReq = new CreateIndexRequest(indexName).
-                        settings(createIndexSettings(newIndexShards, newIndexReplicas, newIndexRefresh));
+                req = new CreateIndexRequest("").settings(toSettings(createIndexSettings(newIndexShards, newIndexReplicas, newIndexRefresh).string()));
+
             Map<String, Object> map = rollIndex(indexName, rollIndices, searchIndices,
-                    deleteAfterRoll, createReq);
+                    deleteAfterRoll, req);
 
             builder.startObject();
             for (Entry<String, Object> e : map.entrySet()) {
@@ -112,10 +99,19 @@ public class RollAction extends BaseRestHandler {
     }
 
     public Map<String, Object> rollIndex(String indexName, int maxRollIndices, int maxSearchIndices) {
-        return rollIndex(indexName, maxRollIndices, maxSearchIndices, false,
-                new CreateIndexRequest(indexName).settings(createIndexSettings(2, 1, "10s")));
+        try {
+            return rollIndex(indexName, maxRollIndices, maxSearchIndices, false,
+                    new CreateIndexRequest("").settings(toSettings(createIndexSettings(2, 1, "10s").string())));
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
+    Settings toSettings(String str) {
+        return ImmutableSettings.settingsBuilder().loadFromSource(str).build();
+    }
+
+    // TODO make client calls async, see RestCreateIndexAction
     public Map<String, Object> rollIndex(String indexName, int maxRollIndices, int maxSearchIndices,
             boolean deleteAfterRoll, CreateIndexRequest request) {
         String rollAlias = getRoll(indexName);
@@ -133,7 +129,7 @@ public class RollAction extends BaseRestHandler {
         String feedAlias = getFeed(indexName);
         String newIndexName = indexName + "_" + formatter.print(System.currentTimeMillis());
 
-        client.admin().indices().create(request).actionGet();
+        client.admin().indices().create(request.index(newIndexName)).actionGet();
         addAlias(newIndexName, searchAlias);
         addAlias(newIndexName, rollAlias);
 
@@ -210,21 +206,15 @@ public class RollAction extends BaseRestHandler {
     }
 
     XContentBuilder createIndexSettings(int shards, int replicas, String refresh) {
-        if (createIndexSettings == null) {
-            try {
-                createIndexSettings = JsonXContent.contentBuilder().startObject().
-                        field("index.number_of_shards", shards).
-                        field("index.number_of_replicas", replicas).
-                        field("index.refresh_interval", refresh).endObject();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
+        try {
+            XContentBuilder createIndexSettings = JsonXContent.contentBuilder().startObject().
+                    field("index.number_of_shards", shards).
+                    field("index.number_of_replicas", replicas).
+                    field("index.refresh_interval", refresh).endObject();
+            return createIndexSettings;
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
         }
-        return createIndexSettings;
-    }
-
-    public void setCreateIndexSettings(XContentBuilder createIndexSettings) {
-        this.createIndexSettings = createIndexSettings;
     }
 
     public void deleteIndex(String indexName) {
