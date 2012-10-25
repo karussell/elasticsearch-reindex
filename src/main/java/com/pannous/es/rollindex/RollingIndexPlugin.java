@@ -1,4 +1,4 @@
-package com.pannous.es.rollplugin;
+package com.pannous.es.rollindex;
 
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.Module;

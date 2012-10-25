@@ -1,10 +1,13 @@
-package com.pannous.es.rollplugin;
+package com.pannous.es.rollindex;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -55,10 +58,11 @@ public class RollAction extends BaseRestHandler {
         logger.info("RollAction constructor [{}]", settings.toString());
     }
 
-    public void handleRequest(RestRequest request, RestChannel channel) {
+    @Override public void handleRequest(RestRequest request, RestChannel channel) {
         logger.info("RollAction.handleRequest [{}]", request.toString());
         try {
             XContentBuilder builder = restContentBuilder(request);
+
             String indexName = request.param("index", "");
             if (indexName.trim().isEmpty()) {
                 builder.startObject()
@@ -73,14 +77,12 @@ public class RollAction extends BaseRestHandler {
             boolean deleteAfterRoll = request.paramAsBoolean("rollIndices", false);
 
             int newIndexShards = request.paramAsInt("newIndexShards", 2);
-            int newIndexReplicas = request.paramAsInt("newIndexReplicas", 2);
+            int newIndexReplicas = request.paramAsInt("newIndexReplicas", 1);
             String newIndexRefresh = request.param("newIndexRefresh", "10s");
-            String createdIndex = rollIndex(indexName, rollIndices, searchIndices, deleteAfterRoll,
+            Map map = rollIndex(indexName, rollIndices, searchIndices, deleteAfterRoll,
                     createIndexSettings(newIndexShards, newIndexReplicas, newIndexRefresh));
 
-            builder.startObject()
-                    .field(new XContentBuilderString("create"), createdIndex)
-                    .endObject();
+            builder.field("changed", map);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
             try {
@@ -95,12 +97,12 @@ public class RollAction extends BaseRestHandler {
         return DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm-ss");
     }
 
-    public String rollIndex(String indexName, int maxRollIndices, int maxSearchIndices) {
+    public Map rollIndex(String indexName, int maxRollIndices, int maxSearchIndices) {
         return rollIndex(indexName, maxRollIndices, maxSearchIndices, false,
-                createIndexSettings(2, 2, "10s"));
+                createIndexSettings(2, 1, "10s"));
     }
 
-    public String rollIndex(String indexName, int maxRollIndices, int maxSearchIndices,
+    public Map rollIndex(String indexName, int maxRollIndices, int maxSearchIndices,
             boolean deleteAfterRoll, XContentBuilder settings) {
         String rollAlias = getRoll(indexName);
         DateTimeFormatter formatter = createFormatter();
@@ -119,6 +121,8 @@ public class RollAction extends BaseRestHandler {
         addAlias(newIndexName, searchAlias);
         addAlias(newIndexName, rollAlias);
 
+        List<String> deleted = new ArrayList<String>();
+        List<String> removedAlias = new ArrayList<String>();
         String oldFeedIndexName = null;
         if (allRollingAliases.isEmpty()) {
             // do nothing for now
@@ -150,10 +154,13 @@ public class RollAction extends BaseRestHandler {
                 if (counter >= maxRollIndices) {
                     if (deleteAfterRoll) {
                         deleteIndex(currentIndexName);
+                        deleted.add(currentIndexName);
                     } else {
                         removeAlias(currentIndexName, rollAlias);
                         removeAlias(currentIndexName, searchAlias);
                         closeIndex(currentIndexName);
+                        removedAlias.add(searchAlias);
+                        removedAlias.add(rollAlias);
                     }
                     // close/delete all the older indices
                     continue;
@@ -162,8 +169,10 @@ public class RollAction extends BaseRestHandler {
                 if (counter == 1)
                     oldFeedIndexName = currentIndexName;
 
-                if (counter >= maxSearchIndices)
+                if (counter >= maxSearchIndices) {
                     removeAlias(currentIndexName, searchAlias);
+                    removedAlias.add(searchAlias);
+                }
 
                 counter++;
             }
@@ -173,7 +182,11 @@ public class RollAction extends BaseRestHandler {
         else
             addAlias(newIndexName, feedAlias);
 
-        return newIndexName;
+        Map map = new HashMap();
+        map.put("created", newIndexName);
+        map.put("deleted", deleted);
+        map.put("removedAlias", removedAlias);
+        return map;
     }
 
     public void createIndex(String indexName, XContentBuilder settings) {

@@ -1,5 +1,6 @@
-package com.pannous.es.rollplugin;
+package com.pannous.es.rollindex;
 
+import com.pannous.es.rollindex.RollAction;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.joda.time.format.DateTimeFormat;
 import org.elasticsearch.common.joda.time.format.DateTimeFormatter;
