@@ -23,7 +23,6 @@ import org.elasticsearch.common.joda.time.format.DateTimeFormatter;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentBuilderString;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestChannel;
@@ -52,8 +51,8 @@ public class RollAction extends BaseRestHandler {
         super(settings, client);
 
         // Define REST endpoints to do a roll further and to change the create-index-settings!        
-        controller.registerHandler(PUT, "/{index}/_rollindex", this);
-        controller.registerHandler(POST, "/{index}/_rollindex", this);
+        controller.registerHandler(PUT, "/_rollindex", this);
+        controller.registerHandler(POST, "/_rollindex", this);
         logger.info("RollAction constructor [{}]", settings.toString());
     }
 
@@ -61,7 +60,14 @@ public class RollAction extends BaseRestHandler {
         logger.info("RollAction.handleRequest [{}]", request.toString());
         try {
             XContentBuilder builder = restContentBuilder(request);
-            String indexName = request.param("index", "");
+            String indexName = request.param("indexPrefix", "");
+            if (indexName.isEmpty()) {
+                builder.startObject();
+                builder.field("error", "indexPrefix missing");
+                builder.endObject();
+                channel.sendResponse(new XContentRestResponse(request, BAD_REQUEST, builder));
+                return;
+            }
             int searchIndices = request.paramAsInt("searchIndices", 1);
             int rollIndices = request.paramAsInt("rollIndices", 1);
             boolean deleteAfterRoll = request.paramAsBoolean("deleteAfterRoll", false);
