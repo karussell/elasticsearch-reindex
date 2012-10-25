@@ -14,7 +14,6 @@ import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import org.testng.annotations.BeforeTest;
 
 public class RollActionTests extends AbstractNodesTests {
 

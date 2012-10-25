@@ -15,6 +15,7 @@ import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.close.CloseIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.common.inject.Inject;
@@ -23,6 +24,8 @@ import org.elasticsearch.common.joda.time.format.DateTimeFormatter;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.RestChannel;
@@ -62,6 +65,7 @@ public class RollAction extends BaseRestHandler {
         try {
             XContentBuilder builder = restContentBuilder(request);
             String indexName = request.param("index", "");
+            request.hasContent();
             if (indexName.trim().isEmpty()) {
                 builder.startObject()
                         .field(new XContentBuilderString("error"), "index not found")
@@ -77,8 +81,16 @@ public class RollAction extends BaseRestHandler {
             int newIndexShards = request.paramAsInt("newIndexShards", 2);
             int newIndexReplicas = request.paramAsInt("newIndexReplicas", 1);
             String newIndexRefresh = request.param("newIndexRefresh", "10s");
-            Map<String, Object> map = rollIndex(indexName, rollIndices, searchIndices, deleteAfterRoll,
-                    createIndexSettings(newIndexShards, newIndexReplicas, newIndexRefresh));
+
+            CreateIndexRequest createReq;
+            if (request.hasContent())
+                createReq = new CreateIndexRequest(indexName).
+                        settings(request.contentAsString());
+            else
+                createReq = new CreateIndexRequest(indexName).
+                        settings(createIndexSettings(newIndexShards, newIndexReplicas, newIndexRefresh));
+            Map<String, Object> map = rollIndex(indexName, rollIndices, searchIndices,
+                    deleteAfterRoll, createReq);
 
             builder.startObject();
             for (Entry<String, Object> e : map.entrySet()) {
@@ -101,11 +113,11 @@ public class RollAction extends BaseRestHandler {
 
     public Map<String, Object> rollIndex(String indexName, int maxRollIndices, int maxSearchIndices) {
         return rollIndex(indexName, maxRollIndices, maxSearchIndices, false,
-                createIndexSettings(2, 1, "10s"));
+                new CreateIndexRequest(indexName).settings(createIndexSettings(2, 1, "10s")));
     }
 
     public Map<String, Object> rollIndex(String indexName, int maxRollIndices, int maxSearchIndices,
-            boolean deleteAfterRoll, XContentBuilder settings) {
+            boolean deleteAfterRoll, CreateIndexRequest request) {
         String rollAlias = getRoll(indexName);
         DateTimeFormatter formatter = createFormatter();
         if (maxRollIndices < 1 || maxSearchIndices < 1)
@@ -121,7 +133,7 @@ public class RollAction extends BaseRestHandler {
         String feedAlias = getFeed(indexName);
         String newIndexName = indexName + "_" + formatter.print(System.currentTimeMillis());
 
-        createIndex(newIndexName, settings);
+        client.admin().indices().create(request).actionGet();
         addAlias(newIndexName, searchAlias);
         addAlias(newIndexName, rollAlias);
 
@@ -195,10 +207,6 @@ public class RollAction extends BaseRestHandler {
         map.put("closed", closedIndices.trim());
         map.put("removedAlias", removedAlias.trim());
         return map;
-    }
-
-    public void createIndex(String indexName, XContentBuilder settings) {
-        client.admin().indices().create(new CreateIndexRequest(indexName).settings(settings)).actionGet();
     }
 
     XContentBuilder createIndexSettings(int shards, int replicas, String refresh) {
