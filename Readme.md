@@ -18,7 +18,7 @@ The following command:
 > curl -XPUT 'http://localhost:9200/_rollindex?index=test&searchIndices=2&rollIndices=3'
 
 creates a new index with 3 aliases: 
- * 'test_feed' which acts as a feeding alias
+ * 'test_feed' points to the latest index and acts as a feeding alias
  * 'test_search' which spans over the last 2 indices
  * 'test_roll' which spans over the last 3 indices, all older indices will be closed
 
