@@ -163,10 +163,10 @@ public class RollAction extends BaseRestHandler {
                     try {
                         timeLong = formatter.parseMillis(indexDateStr);
                     } catch (Exception ex) {
-                        logger.error("index " + index + " is not in the format " + formatter + " error:" + ex.getMessage());
+                        logger.warn("index " + index + " is not in the format " + formatter + " error:" + ex.getMessage());
                     }
                 } else
-                    logger.error("index " + index + " is not in the format " + formatter);
+                    logger.warn("index " + index + " is not in the format " + formatter);
 
                 String old = sortedIndices.put(timeLong, index);
                 if (old != null)
@@ -245,10 +245,9 @@ public class RollAction extends BaseRestHandler {
     }
 
     public void moveAlias(String oldIndexName, String newIndexName, String alias) {
-        logger.warn("trying to move {} from {} to {} ", alias, oldIndexName, newIndexName);
         IndicesAliasesResponse r = client.admin().indices().aliases(new IndicesAliasesRequest().addAlias(newIndexName, alias).
                 removeAlias(oldIndexName, alias)).actionGet();
-        logger.info("moved {}", r.acknowledged());
+        logger.info("({}) moved {} from {} to {} ", r.acknowledged(), alias, oldIndexName, newIndexName);
     }
 
     public Map<String, AliasMetaData> getAliases(String alias) {
