@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
 import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
+import org.elasticsearch.action.admin.indices.alias.IndicesAliasesResponse;
 import org.elasticsearch.action.admin.indices.close.CloseIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
@@ -154,7 +155,7 @@ public class RollAction extends BaseRestHandler {
             logger.info("aliases:{}, indices:{}", allRollingAliases, Arrays.toString(concreteIndices));
             // if we cannot parse the time from the index name we just treat them as old indices of time == 0
             long timeFake = 0;
-            for (String index : concreteIndices) {                
+            for (String index : concreteIndices) {
                 long timeLong = timeFake++;
                 int pos = index.indexOf("_");
                 if (pos >= 0) {
@@ -173,7 +174,6 @@ public class RollAction extends BaseRestHandler {
             }
             int counter = 1;
             Iterator<String> indexIter = sortedIndices.values().iterator();
-
             while (indexIter.hasNext()) {
                 String currentIndexName = indexIter.next();
                 if (counter >= maxRollIndices) {
@@ -245,8 +245,10 @@ public class RollAction extends BaseRestHandler {
     }
 
     public void moveAlias(String oldIndexName, String newIndexName, String alias) {
-        client.admin().indices().aliases(new IndicesAliasesRequest().addAlias(newIndexName, alias).
+        logger.warn("trying to move {} from {} to {} ", alias, oldIndexName, newIndexName);
+        IndicesAliasesResponse r = client.admin().indices().aliases(new IndicesAliasesRequest().addAlias(newIndexName, alias).
                 removeAlias(oldIndexName, alias)).actionGet();
+        logger.info("moved {}", r.acknowledged());
     }
 
     public Map<String, AliasMetaData> getAliases(String alias) {

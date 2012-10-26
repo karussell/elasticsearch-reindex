@@ -128,9 +128,10 @@ public class RollActionTests extends AbstractNodesTests {
         action.addAlias("whateverindex-1", action.getRoll("tweets"));
 
         Map<String, Object> res = action.rollIndex("tweets", 2, 1);
-        
+                
         assertThat(action.getAliases(action.getRoll("tweets")).size(), equalTo(2));
         assertThat(action.getAliases(action.getSearch("tweets")).size(), equalTo(1));
         assertThat(action.getAliases(action.getFeed("tweets")).size(), equalTo(1));
+        assertThat(action.getAliases(action.getFeed("tweets")).toString(), containsString("tweets"));
     }
 }
