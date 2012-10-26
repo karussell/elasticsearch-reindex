@@ -34,5 +34,4 @@ To change the index creation settings just specify them in the request body. For
 
  * Why do I'm getting IndexAlreadyExistsException? You roll too often, reduce to per minute at maximum. 
    Or change the pattern to include the seconds.
- * Why is no scheduling including? To keep it simple. Otherwise we would require quartz or similar
- 
+ * Why is no scheduling including? TODO ScheduledThreadPoolExecutor
