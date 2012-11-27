@@ -17,9 +17,8 @@ you should see 'loaded [reindex], sites []' in the logs
 # Usage
 
 > curl -XPUT 'http://localhost:9200/indexold/typeold/_reindex?newIndex=indexnew&newType=typenew' -d '
-  { "term" : { "count" : 2 }
-  }
-'
+>  { "term" : { "count" : 2 }
+>  }'
 
 This refeeds all documents in index 'indexold' with type 'typeold' into the index 'indexnew' with type 'typenew'.
 But only documents matching the specified term query will be refeeded.
