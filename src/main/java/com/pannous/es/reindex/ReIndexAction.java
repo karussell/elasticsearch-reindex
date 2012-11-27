@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
@@ -65,9 +66,17 @@ public class ReIndexAction extends BaseRestHandler {
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 100);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
             String query = request.contentAsString();
-            SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
-                    hitsPerPage, withVersion, keepTimeInMinutes);
-            reindex(srb, newIndexName, newType, keepTimeInMinutes, withVersion);
+            boolean ownCluster = true;
+            MySearchResponse rsp;
+            if (ownCluster) {
+                SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
+                        hitsPerPage, withVersion, keepTimeInMinutes);
+                SearchResponse sr = srb.execute().actionGet();
+                rsp = new MySearchResponseES(client, sr, keepTimeInMinutes);
+            } else
+                throw new IllegalStateException("not supported");
+
+            reindex(rsp, newIndexName, newType, keepTimeInMinutes, withVersion);
             logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + query);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
@@ -92,25 +101,22 @@ public class ReIndexAction extends BaseRestHandler {
                 setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes));
     }
 
-    public int reindex(SearchRequestBuilder srb, String newIndex, String newType,
+    public int reindex(MySearchResponse rsp, String newIndex, String newType,
             int keepTimeInMinutes, boolean withVersion) {
 
         boolean flushEnabled = false;
-        SearchResponse rsp = srb.execute().actionGet();
         long total = rsp.hits().totalHits();
         int collectedResults = 0;
         int failed = 0;
         while (true) {
             StopWatch queryWatch = new StopWatch().start();
-            rsp = client.prepareSearchScroll(rsp.scrollId()).
-                    setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes)).execute().actionGet();
-            long currentResults = rsp.hits().hits().length;
+            int currentResults = rsp.doScoll();
             if (currentResults == 0)
                 break;
 
             queryWatch.stop();
             StopWatch updateWatch = new StopWatch().start();
-            failed += bulkUpdate(rsp.getHits(), newIndex, newType, withVersion).size();
+            failed += bulkUpdate(rsp.hits(), newIndex, newType, withVersion).size();
             if (flushEnabled)
                 client.admin().indices().flush(new FlushRequest(newIndex)).actionGet();
 
@@ -128,11 +134,44 @@ public class ReIndexAction extends BaseRestHandler {
         return collectedResults;
     }
 
-    public Collection<Integer> bulkUpdate(SearchHits objects, String indexName,
+    MySearchHits scrollSearch() {
+        return null;
+    }
+
+    class MySearchHitJson implements MySearchHit {
+
+        String id;
+        byte[] source;
+        long version = -1;
+
+        public MySearchHitJson(String id, byte[] source, long version) {
+            this(id, source);
+            this.version = version;
+        }
+
+        public MySearchHitJson(String id, byte[] source) {
+            this.id = id;
+            this.source = source;
+        }
+
+        @Override public String id() {
+            return id;
+        }
+
+        @Override public long version() {
+            return version;
+        }
+
+        @Override public byte[] source() {
+            return source;
+        }
+    }
+
+    Collection<Integer> bulkUpdate(MySearchHits objects, String indexName,
             String newType, boolean withVersion) {
         BulkRequestBuilder brb = client.prepareBulk();
 
-        for (SearchHit hit : objects.getHits()) {
+        for (MySearchHit hit : objects.getHits()) {
             if (hit.id() == null || hit.id().isEmpty()) {
                 logger.warn("Skipped object without id when bulkUpdate:" + hit);
                 continue;

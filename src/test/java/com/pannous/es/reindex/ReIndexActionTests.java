@@ -1,15 +1,11 @@
 package com.pannous.es.reindex;
 
-import com.pannous.es.reindex.ReIndexAction;
-import java.util.Map;
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.count.CountRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.joda.time.format.DateTimeFormat;
-import org.elasticsearch.common.joda.time.format.DateTimeFormatter;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestController;
@@ -53,7 +49,7 @@ public class ReIndexActionTests extends AbstractNodesTests {
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
         SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "", 10, true, 10);
-        int res = action.reindex(srb, "tweets", "tweet", 10, false);
+        int res = action.reindex(createSearchResponseES(srb.execute().actionGet()), "tweets", "tweet", 10, false);
         assertThat(res, equalTo(2));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(2L));
@@ -69,13 +65,16 @@ public class ReIndexActionTests extends AbstractNodesTests {
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
         SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }", 10, true, 10);
-        int res = action.reindex(srb, "tweets", "tweet", 10, false);
+        int res = action.reindex(createSearchResponseES(srb.execute().actionGet()), "tweets", "tweet", 10, false);
         assertThat(res, equalTo(1));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(1L));
     }
 
-    
+    MySearchResponse createSearchResponseES(SearchResponse sr) {
+        return new MySearchResponseES(client, sr, 10);
+    }
+
     private void add(String index, String type, String json) {
         client.prepareIndex(index, type).setSource(json).execute().actionGet();
     }
