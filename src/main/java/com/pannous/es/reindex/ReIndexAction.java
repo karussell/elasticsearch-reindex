@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
@@ -30,8 +29,6 @@ import org.elasticsearch.rest.XContentThrowableRestResponse;
 import static org.elasticsearch.rest.RestRequest.Method.*;
 import static org.elasticsearch.rest.RestStatus.*;
 import static org.elasticsearch.rest.action.support.RestXContentBuilder.*;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 
 /**
  * Refeeds all the documents which matches the type and the (optional) query.
@@ -65,18 +62,24 @@ public class ReIndexAction extends BaseRestHandler {
             boolean withVersion = request.paramAsBoolean("withVersion", false);
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 100);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
+            // TODO use the query as filter!
             String query = request.contentAsString();
-            boolean ownCluster = true;
+            boolean ownCluster = request.hasParam("searchHost");
             MySearchResponse rsp;
             if (ownCluster) {
                 SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
                         hitsPerPage, withVersion, keepTimeInMinutes);
                 SearchResponse sr = srb.execute().actionGet();
                 rsp = new MySearchResponseES(client, sr, keepTimeInMinutes);
-            } else
-                throw new IllegalStateException("not supported");
+            } else {
+                int port = request.paramAsInt("searchPort", 9200);
+                String host = request.param("searchHost", "localhost");
+                // TODO cluster
+                rsp = new MySearchResponseJson(host, port, oldIndexName, oldType, query,
+                        hitsPerPage, withVersion, keepTimeInMinutes);
+            }
 
-            reindex(rsp, newIndexName, newType, keepTimeInMinutes, withVersion);
+            reindex(rsp, newIndexName, newType, withVersion);
             logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + query);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
@@ -101,9 +104,7 @@ public class ReIndexAction extends BaseRestHandler {
                 setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes));
     }
 
-    public int reindex(MySearchResponse rsp, String newIndex, String newType,
-            int keepTimeInMinutes, boolean withVersion) {
-
+    public int reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion) {
         boolean flushEnabled = false;
         long total = rsp.hits().totalHits();
         int collectedResults = 0;
@@ -134,44 +135,10 @@ public class ReIndexAction extends BaseRestHandler {
         return collectedResults;
     }
 
-    MySearchHits scrollSearch() {
-        return null;
-    }
-
-    class MySearchHitJson implements MySearchHit {
-
-        String id;
-        byte[] source;
-        long version = -1;
-
-        public MySearchHitJson(String id, byte[] source, long version) {
-            this(id, source);
-            this.version = version;
-        }
-
-        public MySearchHitJson(String id, byte[] source) {
-            this.id = id;
-            this.source = source;
-        }
-
-        @Override public String id() {
-            return id;
-        }
-
-        @Override public long version() {
-            return version;
-        }
-
-        @Override public byte[] source() {
-            return source;
-        }
-    }
-
     Collection<Integer> bulkUpdate(MySearchHits objects, String indexName,
             String newType, boolean withVersion) {
         BulkRequestBuilder brb = client.prepareBulk();
-
-        for (MySearchHit hit : objects.getHits()) {
+        for (MySearchHit hit : objects.getHits()) {            
             if (hit.id() == null || hit.id().isEmpty()) {
                 logger.warn("Skipped object without id when bulkUpdate:" + hit);
                 continue;

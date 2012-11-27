@@ -58,7 +58,9 @@ class MySearchResponseES implements MySearchResponse {
                             }
 
                             @Override public MySearchHit next() {
-                                return new MySearchHitES(arr[counter]);
+                                MySearchHitES ret = new MySearchHitES(arr[counter]);
+                                counter++;
+                                return ret;
                             }
 
                             @Override public void remove() {

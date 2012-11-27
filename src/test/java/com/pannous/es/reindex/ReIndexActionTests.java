@@ -48,8 +48,8 @@ public class ReIndexActionTests extends AbstractNodesTests {
 
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
-        SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "", 10, true, 10);
-        int res = action.reindex(createSearchResponseES(srb.execute().actionGet()), "tweets", "tweet", 10, false);
+        SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "", 10, false, 1);
+        int res = action.reindex(createSearchResponseES(srb.execute().actionGet(), 1), "tweets", "tweet", false);
         assertThat(res, equalTo(2));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(2L));
@@ -64,15 +64,48 @@ public class ReIndexActionTests extends AbstractNodesTests {
 
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
-        SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }", 10, true, 10);
-        int res = action.reindex(createSearchResponseES(srb.execute().actionGet()), "tweets", "tweet", 10, false);
+        SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }", 10, false, 1);
+        int res = action.reindex(createSearchResponseES(srb.execute().actionGet(), 1), "tweets", "tweet", false);
         assertThat(res, equalTo(1));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(1L));
     }
 
-    MySearchResponse createSearchResponseES(SearchResponse sr) {
-        return new MySearchResponseES(client, sr, 10);
+    MySearchResponse createSearchResponseES(SearchResponse sr, int keep) {
+        return new MySearchResponseES(client, sr, keep);
+    }
+
+    // TODO make multiple instances and avoid copy and paste
+    @Test public void reindexAllJSON() throws Exception {
+        deleteAll();
+        add("oldtweets", "tweet", "{ \"name\" : \"hello world\", \"count\" : 1}");
+        add("oldtweets", "tweet", "{ \"name\" : \"peter test\", \"count\" : 2}");
+        refresh("oldtweets");
+        assertThat(count("oldtweets"), equalTo(2L));
+
+        Settings emptySettings = ImmutableSettings.settingsBuilder().build();
+        ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
+        int res = action.reindex(new MySearchResponseJson("localhost", 9200, "oldtweets", "tweet", "",
+                10, false, 1), "tweets", "tweet", false);
+        assertThat(res, equalTo(2));
+        refresh("tweets");
+        assertThat(count("tweets"), equalTo(2L));
+    }
+
+    @Test public void reindexAllPartialJSON() throws Exception {
+        deleteAll();
+        add("oldtweets", "tweet", "{ \"name\" : \"hello world\", \"count\" : 1}");
+        add("oldtweets", "tweet", "{ \"name\" : \"peter test\", \"count\" : 2}");
+        refresh("oldtweets");
+        assertThat(count("oldtweets"), equalTo(2L));
+
+        Settings emptySettings = ImmutableSettings.settingsBuilder().build();
+        ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
+        int res = action.reindex(new MySearchResponseJson("localhost", 9200, "oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }",
+                10, false, 1), "tweets", "tweet", false);
+        assertThat(res, equalTo(1));
+        refresh("tweets");
+        assertThat(count("tweets"), equalTo(1L));
     }
 
     private void add(String index, String type, String json) {
