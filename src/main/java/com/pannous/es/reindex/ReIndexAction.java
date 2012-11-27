@@ -60,11 +60,14 @@ public class ReIndexAction extends BaseRestHandler {
 
             String oldType = request.param("type");
             String newType = request.param("newType");
+            if (newType.isEmpty())
+                newType = oldType;
 
             boolean withVersion = false;
             int keepTimeInMinutes = 100;
             int hitsPerPage = 100;
-            SearchRequestBuilder srb = createSearch(oldIndexName, oldType, request.contentAsString(),
+            String query = request.contentAsString();
+            SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
                     hitsPerPage, withVersion, keepTimeInMinutes);
             int collectedResults = reindex(srb, newIndexName, newType, keepTimeInMinutes, withVersion);
             logger.info("Finished copying of index:" + newIndexName + ", collected results:" + collectedResults);
@@ -80,6 +83,8 @@ public class ReIndexAction extends BaseRestHandler {
 
     SearchRequestBuilder createSearch(String oldIndexName, String oldType, String query,
             int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
+        if (query == null || query.trim().isEmpty())
+            query = "{ \"match_all\": {} }";
         return client.prepareSearch(oldIndexName).
                 setTypes(oldType).
                 setVersion(withVersion).

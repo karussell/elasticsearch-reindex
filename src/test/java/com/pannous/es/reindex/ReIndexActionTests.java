@@ -52,7 +52,7 @@ public class ReIndexActionTests extends AbstractNodesTests {
 
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         ReIndexAction action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
-        SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "{ \"match_all\": {} }", 10, true, 10);
+        SearchRequestBuilder srb = action.createSearch("oldtweets", "tweet", "", 10, true, 10);
         int res = action.reindex(srb, "tweets", "tweet", 10, false);
         assertThat(res, equalTo(2));
         refresh("tweets");
