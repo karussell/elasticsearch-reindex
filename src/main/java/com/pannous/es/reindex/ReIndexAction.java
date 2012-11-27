@@ -61,9 +61,9 @@ public class ReIndexAction extends BaseRestHandler {
             if (newType == null || newType.isEmpty())
                 newType = oldType;
 
-            boolean withVersion = false;
-            int keepTimeInMinutes = 100;
-            int hitsPerPage = 100;
+            boolean withVersion = request.paramAsBoolean("withVersion", false);
+            int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 100);
+            int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
             String query = request.contentAsString();
             SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
                     hitsPerPage, withVersion, keepTimeInMinutes);
@@ -117,7 +117,8 @@ public class ReIndexAction extends BaseRestHandler {
             updateWatch.stop();
             collectedResults += currentResults;
             logger.info("Progress " + collectedResults + "/" + total
-                    + " update:" + updateWatch.totalTime().getSeconds() + " query:" + queryWatch.totalTime().getSeconds() + " failed:" + failed);
+                    + " update:" + updateWatch.totalTime().getSeconds() + " query:"
+                    + queryWatch.totalTime().getSeconds() + " failed:" + failed);
         }
         String str = "found " + total + ", collected:" + collectedResults;
         if (failed > 0)
