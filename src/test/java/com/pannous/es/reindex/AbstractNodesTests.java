@@ -1,4 +1,4 @@
-package com.pannous.es.rollindex;
+package com.pannous.es.reindex;
 
 import java.util.HashMap;
 import java.util.Map;
