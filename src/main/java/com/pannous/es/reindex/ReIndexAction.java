@@ -33,9 +33,8 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 
 /**
- * @see issue 1500 https://github.com/elasticsearch/elasticsearch/issues/1500
+ * Refeeds all the documents which matches the type and the (optional) query.
  *
- * Only indices with the rolling alias are involved into rolling.
  * @author Peter Karich
  */
 public class ReIndexAction extends BaseRestHandler {
@@ -43,10 +42,9 @@ public class ReIndexAction extends BaseRestHandler {
     @Inject public ReIndexAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
 
-        // Define REST endpoints to do a roll further and to change the create-index-settings!        
+        // Define REST endpoints to do a reindex
         controller.registerHandler(PUT, "/{index}/{type}/_reindex", this);
         controller.registerHandler(POST, "/{index}/{type}/_reindex", this);
-        logger.info("ReIndexAction constructor [{}]", settings.toString());
     }
 
     @Override public void handleRequest(RestRequest request, RestChannel channel) {
@@ -55,12 +53,12 @@ public class ReIndexAction extends BaseRestHandler {
             XContentBuilder builder = restContentBuilder(request);
             String oldIndexName = request.param("index");
             String newIndexName = request.param("newIndex");
-            if (newIndexName.isEmpty())
+            if (newIndexName == null || newIndexName.isEmpty())
                 newIndexName = oldIndexName;
 
             String oldType = request.param("type");
             String newType = request.param("newType");
-            if (newType.isEmpty())
+            if (newType == null || newType.isEmpty())
                 newType = oldType;
 
             boolean withVersion = false;
@@ -69,8 +67,8 @@ public class ReIndexAction extends BaseRestHandler {
             String query = request.contentAsString();
             SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
                     hitsPerPage, withVersion, keepTimeInMinutes);
-            int collectedResults = reindex(srb, newIndexName, newType, keepTimeInMinutes, withVersion);
-            logger.info("Finished copying of index:" + newIndexName + ", collected results:" + collectedResults);
+            reindex(srb, newIndexName, newType, keepTimeInMinutes, withVersion);
+            logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + query);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
             try {
@@ -101,6 +99,7 @@ public class ReIndexAction extends BaseRestHandler {
         SearchResponse rsp = srb.execute().actionGet();
         long total = rsp.hits().totalHits();
         int collectedResults = 0;
+        int failed = 0;
         while (true) {
             StopWatch queryWatch = new StopWatch().start();
             rsp = client.prepareSearchScroll(rsp.scrollId()).
@@ -111,7 +110,7 @@ public class ReIndexAction extends BaseRestHandler {
 
             queryWatch.stop();
             StopWatch updateWatch = new StopWatch().start();
-            int failed = bulkUpdate(rsp.getHits(), newIndex, newType, withVersion).size();
+            failed += bulkUpdate(rsp.getHits(), newIndex, newType, withVersion).size();
             if (flushEnabled)
                 client.admin().indices().flush(new FlushRequest(newIndex)).actionGet();
 
@@ -120,6 +119,11 @@ public class ReIndexAction extends BaseRestHandler {
             logger.info("Progress " + collectedResults + "/" + total
                     + " update:" + updateWatch.totalTime().getSeconds() + " query:" + queryWatch.totalTime().getSeconds() + " failed:" + failed);
         }
+        String str = "found " + total + ", collected:" + collectedResults;
+        if (failed > 0)
+            logger.warn(failed + " FAILED documents! " + str);
+        else
+            logger.info(str);
         return collectedResults;
     }
 
