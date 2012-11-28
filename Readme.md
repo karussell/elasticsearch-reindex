@@ -37,6 +37,8 @@ Further parameters:
  * hitsPerPage - used as search limit and at the same time for bulk indexing (default 100)
  * keepTimeInMinutes - the maximum time in minutes a scroll search is valid (default 30) increase if you have more data
  * withVersion - if the version of a document should be respected (default false)
+ * waitInSeconds - pause the specified time after every request pair (one search+one bulkIndex). 
+   This avoids heavy load on the search or on the indexing server/cluster.
 
 Hints:
  * the index 'indexnew' and the type 'typenew' should exist. If not, the defaults of elasticsearch will apply

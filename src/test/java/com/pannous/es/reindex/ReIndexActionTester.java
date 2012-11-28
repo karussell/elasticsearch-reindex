@@ -58,7 +58,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         refresh("oldtweets");
         assertThat(count("oldtweets"), equalTo(2L));
 
-        int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false);
+        int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false, 0);
         assertThat(res, equalTo(2));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(2L));
@@ -76,7 +76,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         add("oldtweets", "tweet", "{ \"name\" : \"peter test\", \"count\" : 2}");
         refresh("oldtweets");
         assertThat(count("oldtweets"), equalTo(2L));
-        int res = action.reindex(scrollSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }"), "tweets", "tweet", false);
+        int res = action.reindex(scrollSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }"), "tweets", "tweet", false, 0);
         assertThat(res, equalTo(1));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(1L));

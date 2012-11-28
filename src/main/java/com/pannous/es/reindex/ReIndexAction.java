@@ -62,6 +62,7 @@ public class ReIndexAction extends BaseRestHandler {
             boolean withVersion = request.paramAsBoolean("withVersion", false);
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 30);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
+            int waitInSeconds = request.paramAsInt("waitInSeconds", 0);
             String filter = request.contentAsString();
             boolean ownCluster = request.hasParam("searchHost");
             MySearchResponse rsp;
@@ -78,7 +79,7 @@ public class ReIndexAction extends BaseRestHandler {
                         hitsPerPage, withVersion, keepTimeInMinutes);
             }
 
-            reindex(rsp, newIndexName, newType, withVersion);
+            reindex(rsp, newIndexName, newType, withVersion, waitInSeconds);
             logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + filter);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
@@ -104,12 +105,20 @@ public class ReIndexAction extends BaseRestHandler {
         return srb;
     }
 
-    public int reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion) {
+    public int reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion,
+            int waitSeconds) {
         boolean flushEnabled = false;
         long total = rsp.hits().totalHits();
         int collectedResults = 0;
         int failed = 0;
         while (true) {
+            if (collectedResults > 0 && waitSeconds > 0) {
+                try {
+                    Thread.sleep(waitSeconds);
+                } catch (InterruptedException ex) {
+                    break;
+                }
+            }
             StopWatch queryWatch = new StopWatch().start();
             int currentResults = rsp.doScoll();
             if (currentResults == 0)
