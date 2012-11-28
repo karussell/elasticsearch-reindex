@@ -64,16 +64,15 @@ public class ReIndexAction extends BaseRestHandler {
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
             int waitInSeconds = request.paramAsInt("waitInSeconds", 0);
             String filter = request.contentAsString();
-            boolean ownCluster = request.hasParam("searchHost");
-            MySearchResponse rsp;
-            if (!ownCluster) {
+            int port = request.paramAsInt("searchPort", 9200);
+            String host = request.param("searchHost", "localhost");
+            MySearchResponse rsp;            
+            if ("localhost".equals(host) && port == 9200) {
                 SearchRequestBuilder srb = createScrollSearch(oldIndexName, oldType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
                 SearchResponse sr = srb.execute().actionGet();
                 rsp = new MySearchResponseES(client, sr, keepTimeInMinutes);
             } else {
-                int port = request.paramAsInt("searchPort", 9200);
-                String host = request.param("searchHost", "localhost");
                 // TODO make it possible to restrict to a cluster
                 rsp = new MySearchResponseJson(host, port, oldIndexName, oldType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);

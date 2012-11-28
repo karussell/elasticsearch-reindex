@@ -16,6 +16,12 @@ you should see 'loaded [reindex], sites []' in the logs
 
 # Usage
 
+## WARNINGs / TODOs:
+ * please try on your local machine before using it in production - especially the case searchHost!=localhost could be problematic for your performance/IO
+ * the call is not async and not stopable (except you stop the requested server) => The plugin should probably be better a river
+ * if you have two servers on localhost and the queried server port is 9201 and you want to search
+   the different server at 9200. => you have to use: searchHost=127.0.0.1&searchPort=9200
+
 ## Same cluster 
 
 The internal Java API will be used:
@@ -47,4 +53,3 @@ Hints:
  * the filter is also optional
  * This command can be used to update documents of an index, e.g. after you change the settings of a type
  * This command can be used to change the index settings like shard count
-
