@@ -38,10 +38,11 @@ Further parameters:
  * keepTimeInMinutes - the maximum time in minutes a scroll search is valid (default 30) increase if you have more data
  * withVersion - if the version of a document should be respected (default false)
  * waitInSeconds - pause the specified time after every request pair (one search+one bulkIndex). 
-   This avoids heavy load on the search or on the indexing server/cluster.
+   This avoids heavy load on the search or on the indexing server/cluster. This way it is very easy
+   e.g. to grab even a massive amount of data from your production servers into your local machine.
 
 Hints:
- * the index 'indexnew' and the type 'typenew' should exist. If not, the defaults of elasticsearch will apply
+ * the index 'indexnew' and the type 'typenew' should exist. E.g. it is important that you create the index with the appropriated config! If not, the defaults of elasticsearch will apply
  * the parameters 'newIndex' and 'newType' are optional and the old one will be used if not provided
  * the filter is also optional
  * This command can be used to update documents of an index, e.g. after you change the settings of a type

@@ -66,7 +66,7 @@ public class ReIndexAction extends BaseRestHandler {
             String filter = request.contentAsString();
             boolean ownCluster = request.hasParam("searchHost");
             MySearchResponse rsp;
-            if (ownCluster) {
+            if (!ownCluster) {
                 SearchRequestBuilder srb = createScrollSearch(oldIndexName, oldType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
                 SearchResponse sr = srb.execute().actionGet();
@@ -79,6 +79,8 @@ public class ReIndexAction extends BaseRestHandler {
                         hitsPerPage, withVersion, keepTimeInMinutes);
             }
 
+            // TODO make async and allow control of process from external (e.g. stopping etc)
+            // or just move stuff into a river?
             reindex(rsp, newIndexName, newType, withVersion, waitInSeconds);
             logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + filter);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
@@ -114,7 +116,7 @@ public class ReIndexAction extends BaseRestHandler {
         while (true) {
             if (collectedResults > 0 && waitSeconds > 0) {
                 try {
-                    Thread.sleep(waitSeconds);
+                    Thread.sleep(waitSeconds * 1000);
                 } catch (InterruptedException ex) {
                     break;
                 }
@@ -133,7 +135,7 @@ public class ReIndexAction extends BaseRestHandler {
             updateWatch.stop();
             collectedResults += currentResults;
             logger.info("Progress " + collectedResults + "/" + total
-                    + " update:" + updateWatch.totalTime().getSeconds() + " query:"
+                    + ". Time of update:" + updateWatch.totalTime().getSeconds() + " query:"
                     + queryWatch.totalTime().getSeconds() + " failed:" + failed);
         }
         String str = "found " + total + ", collected:" + collectedResults;
