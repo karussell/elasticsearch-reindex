@@ -1,4 +1,19 @@
-# Install
+# Purpose
+
+This plugin can be used to
+
+ * updating all or selected documents of an index, e.g. after you change the settings of a type
+ * to change the index settings like shard count: create a new index with that config and reindex all documents into that index
+ * grab all or selected documents from another elasticsearch cluster and feed your local machine with that
+ * ...
+
+
+# License
+
+Apache License 2.0
+
+
+# Installation
 
 > mvn -DskipTests clean package
 
@@ -8,29 +23,33 @@
 
 > sudo service elasticsearch restart
 
-you should see 'loaded [reindex], sites []' in the logs
+you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh script for development purposes
+
 
 # Deinstallation
 
 > sudo $ES_HOME/bin/plugin remove reindex
 
+> sudo service elasticsearch restart
+
+
 # Usage
 
 ## WARNINGs / TODOs:
- * please try on your local machine before using it in production - especially the case searchHost!=localhost could be problematic for your performance/IO
- * the call is not async and not stopable (except you stop the requested server) => The plugin should probably be better a river
- * if you have two servers on localhost and the queried server port is 9201 and you want to search
-   the different server at 9200. => you have to use: searchHost=127.0.0.1&searchPort=9200
+
+ * Please try this on your local machine before using it in production - especially the case searchHost!=localhost could be problematic for your performance/IO
+ * The call is not async and not stopable (except you stop the requested server) => The plugin should probably be better a river
+ * If you have two servers on localhost and the queried server port is 9201 and you want to search
+   the different server at 9200 => then you have to use e.g. searchHost=127.0.0.1&searchPort=9200
 
 ## Same cluster 
-
-The internal Java API will be used:
 
 > curl -XPUT 'http://localhost:9200/indexold/typeold/_reindex?newIndex=indexnew&newType=typenew' -d '
 >  { "term" : { "count" : 2 } }'
 
 This refeeds all documents in index 'indexold' with type 'typeold' into the index 'indexnew' with type 'typenew'.
-But only documents matching the specified filter will be refeeded.
+But only documents matching the specified filter will be refeeded. The internal Java API will be used which should
+should be efficient.
 
 ## Different cluster 
 
@@ -48,8 +67,6 @@ Further parameters:
    e.g. to grab even a massive amount of data from your production servers into your local machine.
 
 Hints:
- * the index 'indexnew' and the type 'typenew' should exist. E.g. it is important that you create the index with the appropriated config! If not, the defaults of elasticsearch will apply
+ * the index 'indexnew' and the type 'typenew' should exist. If not, the defaults of elasticsearch will apply
  * the parameters 'newIndex' and 'newType' are optional and the old one will be used if not provided
  * the filter is also optional
- * This command can be used to update documents of an index, e.g. after you change the settings of a type
- * This command can be used to change the index settings like shard count
