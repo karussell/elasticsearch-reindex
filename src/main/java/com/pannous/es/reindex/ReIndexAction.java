@@ -60,27 +60,26 @@ public class ReIndexAction extends BaseRestHandler {
                 newType = oldType;
 
             boolean withVersion = request.paramAsBoolean("withVersion", false);
-            int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 100);
+            int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 30);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
-            // TODO use the query as filter!
-            String query = request.contentAsString();
+            String filter = request.contentAsString();
             boolean ownCluster = request.hasParam("searchHost");
             MySearchResponse rsp;
             if (ownCluster) {
-                SearchRequestBuilder srb = createSearch(oldIndexName, oldType, query,
+                SearchRequestBuilder srb = createScrollSearch(oldIndexName, oldType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
                 SearchResponse sr = srb.execute().actionGet();
                 rsp = new MySearchResponseES(client, sr, keepTimeInMinutes);
             } else {
                 int port = request.paramAsInt("searchPort", 9200);
                 String host = request.param("searchHost", "localhost");
-                // TODO cluster
-                rsp = new MySearchResponseJson(host, port, oldIndexName, oldType, query,
+                // TODO make it possible to restrict to a cluster
+                rsp = new MySearchResponseJson(host, port, oldIndexName, oldType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
             }
 
             reindex(rsp, newIndexName, newType, withVersion);
-            logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + query);
+            logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + filter);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
             try {
@@ -91,17 +90,18 @@ public class ReIndexAction extends BaseRestHandler {
         }
     }
 
-    SearchRequestBuilder createSearch(String oldIndexName, String oldType, String query,
+    SearchRequestBuilder createScrollSearch(String oldIndexName, String oldType, String filter,
             int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
-        if (query == null || query.trim().isEmpty())
-            query = "{ \"match_all\": {} }";
-        return client.prepareSearch(oldIndexName).
+        SearchRequestBuilder srb = client.prepareSearch(oldIndexName).
                 setTypes(oldType).
                 setVersion(withVersion).
-                setQuery(query).
                 setSize(hitsPerPage).
                 setSearchType(SearchType.SCAN).
                 setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes));
+
+        if (filter != null && !filter.trim().isEmpty())
+            srb.setFilter(filter);
+        return srb;
     }
 
     public int reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion) {
@@ -138,7 +138,7 @@ public class ReIndexAction extends BaseRestHandler {
     Collection<Integer> bulkUpdate(MySearchHits objects, String indexName,
             String newType, boolean withVersion) {
         BulkRequestBuilder brb = client.prepareBulk();
-        for (MySearchHit hit : objects.getHits()) {            
+        for (MySearchHit hit : objects.getHits()) {
             if (hit.id() == null || hit.id().isEmpty()) {
                 logger.warn("Skipped object without id when bulkUpdate:" + hit);
                 continue;

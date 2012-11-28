@@ -52,20 +52,14 @@ class MySearchResponseJson implements MySearchResponse {
     private int port;
     private int keepMin;
     private final boolean withVersion;
-    private final String oldType;
-    private final String oldIndexName;
     private final long totalHits;
 
     public MySearchResponseJson(String host, int port, String oldIndexName, String oldType,
-            String query, int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
+            String filter, int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
         if (!host.startsWith("http"))
             host = "http://" + host;
-        if (query == null || query.trim().isEmpty())
-            query = "{ \"match_all\": {} }";
         this.host = host;
         this.port = port;
-        this.oldIndexName = oldIndexName;
-        this.oldType = oldType;
         this.withVersion = withVersion;
         keepMin = keepTimeInMinutes;
         bufferedHits = new ArrayList<MySearchHit>(hitsPerPage);
@@ -79,7 +73,14 @@ class MySearchResponseJson implements MySearchResponse {
         try {
             String url = host + ":" + port + "/" + oldIndexName + "/" + oldType
                     + "/_search?search_type=scan&scroll=" + keepMin + "m&size=" + hitsPerPage;
-            JSONObject res = doPost(url, "{ \"query\" :" + query + "}");
+
+            String query;
+            if (filter == null || filter.isEmpty())
+                query = "{ \"query\" : {\"match_all\" : {}}}";
+            else
+                query = "{ \"filter\" : " + filter + "}";
+
+            JSONObject res = doPost(url, query);
             scrollId = res.getString("_scroll_id");
             totalHits = res.getJSONObject("hits").getLong("total");
         } catch (JSONException ex) {

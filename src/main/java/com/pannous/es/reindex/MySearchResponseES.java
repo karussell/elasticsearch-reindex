@@ -42,13 +42,11 @@ class MySearchResponseES implements MySearchResponse {
 
     @Override public MySearchHits hits() {
         final SearchHits hits = rsp.hits();
-        // uh
+        // uh iterable is strange
         return new MySearchHits() {
-            @Override
-            public Iterable<MySearchHit> getHits() {
+            @Override public Iterable<MySearchHit> getHits() {
                 return new Iterable<MySearchHit>() {
-                    @Override
-                    public Iterator<MySearchHit> iterator() {
+                    @Override public Iterator<MySearchHit> iterator() {
                         return new Iterator<MySearchHit>() {
                             SearchHit[] arr = hits.hits();
                             int counter = 0;
