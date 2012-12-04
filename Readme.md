@@ -2,11 +2,12 @@
 
 This plugin can be used to
 
- * updating all or selected documents of an index, e.g. after you change the settings of a type
+ * update all or selected documents of an index, e.g. after you change the settings of a type
  * to change the index settings like shard count: create a new index with that config and reindex all documents into that index
  * grab all or selected documents from another elasticsearch cluster and feed your local machine with that
  * ...
 
+![overview in ElasticSearch Head](https://raw.github.com/karussell/elasticsearch-reindex/master/reindex.png)
 
 # License
 
