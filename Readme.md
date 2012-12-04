@@ -7,8 +7,6 @@ This plugin can be used to
  * grab all or selected documents from another elasticsearch cluster and feed your local machine with that
  * ...
 
-![overview in ElasticSearch Head](https://raw.github.com/karussell/elasticsearch-reindex/master/reindex.png)
-
 # License
 
 Apache License 2.0
