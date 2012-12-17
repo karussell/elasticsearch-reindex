@@ -35,6 +35,9 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
+import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,7 +46,7 @@ import org.json.JSONObject;
  * @author Peter Karich
  */
 class MySearchResponseJson implements MySearchResponse {
-
+    
     private int timeout = 20000;
     private HttpClient client;
     private String scrollId;
@@ -54,12 +57,12 @@ class MySearchResponseJson implements MySearchResponse {
     private final boolean withVersion;
     private final long totalHits;
 
-    public MySearchResponseJson(String host, int port, String oldIndexName, String oldType,
+    public MySearchResponseJson(String searchHost, int searchPort, String searchIndexName, String searchType,
             String filter, int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
-        if (!host.startsWith("http"))
-            host = "http://" + host;
-        this.host = host;
-        this.port = port;
+        if (!searchHost.startsWith("http"))
+            searchHost = "http://" + searchHost;
+        this.host = searchHost;
+        this.port = searchPort;
         this.withVersion = withVersion;
         keepMin = keepTimeInMinutes;
         bufferedHits = new ArrayList<MySearchHit>(hitsPerPage);
@@ -71,7 +74,7 @@ class MySearchResponseJson implements MySearchResponse {
 
         // initial query to get scroll id for our specific search
         try {
-            String url = host + ":" + port + "/" + oldIndexName + "/" + oldType
+            String url = searchHost + ":" + searchPort + "/" + searchIndexName + "/" + searchType
                     + "/_search?search_type=scan&scroll=" + keepMin + "m&size=" + hitsPerPage;
 
             String query;

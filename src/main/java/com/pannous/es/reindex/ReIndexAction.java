@@ -49,39 +49,39 @@ public class ReIndexAction extends BaseRestHandler {
         logger.info("ReIndexAction.handleRequest [{}]", request.toString());
         try {
             XContentBuilder builder = restContentBuilder(request);
-            String oldIndexName = request.param("index");
-            String newIndexName = request.param("newIndex");
-            if (newIndexName == null || newIndexName.isEmpty())
-                newIndexName = oldIndexName;
+            String newIndexName = request.param("index");
+            String searchIndexName = request.param("searchIndex");
+            if (searchIndexName == null || searchIndexName.isEmpty())
+                searchIndexName = newIndexName;
 
-            String oldType = request.param("type");
-            String newType = request.param("newType");
-            if (newType == null || newType.isEmpty())
-                newType = oldType;
+            String newType = request.param("type");
+            String searchType = request.param("searchType");
+            if (searchType == null || searchType.isEmpty())
+                searchType = newType;
 
             boolean withVersion = request.paramAsBoolean("withVersion", false);
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 30);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
             int waitInSeconds = request.paramAsInt("waitInSeconds", 0);
             String filter = request.contentAsString();
-            int port = request.paramAsInt("searchPort", 9200);
-            String host = request.param("searchHost", "localhost");
-            MySearchResponse rsp;            
-            if ("localhost".equals(host) && port == 9200) {
-                SearchRequestBuilder srb = createScrollSearch(oldIndexName, oldType, filter,
+            int searchPort = request.paramAsInt("searchPort", 9200);
+            String searchHost = request.param("searchHost", "localhost");
+            MySearchResponse rsp;
+            if ("localhost".equals(searchHost) && searchPort == 9200) {
+                SearchRequestBuilder srb = createScrollSearch(searchIndexName, searchType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
                 SearchResponse sr = srb.execute().actionGet();
                 rsp = new MySearchResponseES(client, sr, keepTimeInMinutes);
             } else {
                 // TODO make it possible to restrict to a cluster
-                rsp = new MySearchResponseJson(host, port, oldIndexName, oldType, filter,
+                rsp = new MySearchResponseJson(searchHost, searchPort, searchIndexName, searchType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
             }
 
             // TODO make async and allow control of process from external (e.g. stopping etc)
             // or just move stuff into a river?
             reindex(rsp, newIndexName, newType, withVersion, waitInSeconds);
-            logger.info("Finished copying of index " + oldIndexName + " into " + newIndexName + ", query " + filter);
+            logger.info("Finished copying of index " + searchIndexName + " into " + newIndexName + ", query " + filter);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
             try {
