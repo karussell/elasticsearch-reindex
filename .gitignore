@@ -2,3 +2,4 @@ target/
 nb-configuration.xml
 *~
 data/
+deploy.sh
