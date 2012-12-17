@@ -35,9 +35,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
-import org.elasticsearch.ExceptionsHelper;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -46,7 +43,7 @@ import org.json.JSONObject;
  * @author Peter Karich
  */
 class MySearchResponseJson implements MySearchResponse {
-    
+
     private int timeout = 20000;
     private HttpClient client;
     private String scrollId;
@@ -56,6 +53,7 @@ class MySearchResponseJson implements MySearchResponse {
     private int keepMin;
     private final boolean withVersion;
     private final long totalHits;
+    private long bytes;
 
     public MySearchResponseJson(String searchHost, int searchPort, String searchIndexName, String searchType,
             String filter, int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
@@ -122,6 +120,7 @@ class MySearchResponseJson implements MySearchResponse {
                 byte[] source = hitJson.getString("_source").getBytes();
                 if (withVersion && hitJson.has("_version"))
                     version = hitJson.getLong("_version");
+                bytes += source.length;
                 MySearchHitJson res = new MySearchHitJson(id, source, version);
                 bufferedHits.add(res);
             }
@@ -129,6 +128,11 @@ class MySearchResponseJson implements MySearchResponse {
         } catch (JSONException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @Override
+    public long bytes() {
+        return bytes;
     }
 
     class MySearchHitJson implements MySearchHit {

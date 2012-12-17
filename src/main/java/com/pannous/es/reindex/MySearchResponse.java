@@ -18,11 +18,13 @@ package com.pannous.es.reindex;
 /**
  * @author Peter Karich
  */
-public interface MySearchResponse {
+public interface MySearchResponse {    
 
     MySearchHits hits();
 
     String scrollId();
 
     int doScoll();
+    
+    long bytes();
 }

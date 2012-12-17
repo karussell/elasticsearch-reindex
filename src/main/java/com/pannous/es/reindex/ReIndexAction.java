@@ -137,7 +137,8 @@ public class ReIndexAction extends BaseRestHandler {
                     + ". Time of update:" + updateWatch.totalTime().getSeconds() + " query:"
                     + queryWatch.totalTime().getSeconds() + " failed:" + failed);
         }
-        String str = "found " + total + ", collected:" + collectedResults;
+        String str = "found " + total + ", collected:" + collectedResults
+                + ", transfered:" + (float) rsp.bytes() / (1 << 20) + "MB";
         if (failed > 0)
             logger.warn(failed + " FAILED documents! " + str);
         else

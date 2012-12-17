@@ -33,6 +33,7 @@ class MySearchResponseES implements MySearchResponse {
     private SearchResponse rsp;
     private final int keepTimeInMinutes;
     private final Client client;
+    private long bytes = 0;
 
     public MySearchResponseES(Client client, SearchResponse rsp, int keepTimeInMinutes) {
         this.client = client;
@@ -56,6 +57,7 @@ class MySearchResponseES implements MySearchResponse {
                             }
 
                             @Override public MySearchHit next() {
+                                bytes += arr[counter].source().length;
                                 MySearchHitES ret = new MySearchHitES(arr[counter]);
                                 counter++;
                                 return ret;
@@ -83,6 +85,11 @@ class MySearchResponseES implements MySearchResponse {
     @Override public int doScoll() {
         rsp = client.prepareSearchScroll(scrollId()).setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes)).execute().actionGet();
         return rsp.hits().hits().length;
+    }
+
+    @Override
+    public long bytes() {
+        return bytes;
     }
 
     static class MySearchHitES implements MySearchHit {

@@ -45,11 +45,11 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
     }
 
-    protected MySearchResponse scrollSearch(String oldIndex, String oldType, String query) {
-        return scrollSearch(oldIndex, oldType, query, 10, false, 1);
+    protected MySearchResponse scrollSearch(String searchIndex, String searchType, String query) {
+        return scrollSearch(searchIndex, searchType, query, 10, false, 1);
     }
 
-    protected abstract MySearchResponse scrollSearch(String oldIndex, String oldType, String query, int hits,
+    protected abstract MySearchResponse scrollSearch(String searchIndex, String searchType, String query, int hits,
             boolean withVersion, int keepMinutes);
 
     @Test public void reindexAll() throws Exception {
