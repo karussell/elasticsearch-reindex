@@ -62,7 +62,7 @@ public class ReIndexAction extends BaseRestHandler {
             boolean withVersion = request.paramAsBoolean("withVersion", false);
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 30);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
-            int waitInSeconds = request.paramAsInt("waitInSeconds", 0);
+            float waitInSeconds = request.paramAsFloat("waitInSeconds", 0);
             String filter = request.contentAsString();
             int searchPort = request.paramAsInt("searchPort", 9200);
             String searchHost = request.param("searchHost", "localhost");
@@ -107,7 +107,7 @@ public class ReIndexAction extends BaseRestHandler {
     }
 
     public int reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion,
-            int waitSeconds) {
+            float waitSeconds) {
         boolean flushEnabled = false;
         long total = rsp.hits().totalHits();
         int collectedResults = 0;
@@ -115,7 +115,7 @@ public class ReIndexAction extends BaseRestHandler {
         while (true) {
             if (collectedResults > 0 && waitSeconds > 0) {
                 try {
-                    Thread.sleep(waitSeconds * 1000);
+                    Thread.sleep(Math.round(waitSeconds * 1000));
                 } catch (InterruptedException ex) {
                     break;
                 }
