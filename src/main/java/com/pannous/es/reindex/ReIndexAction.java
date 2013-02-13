@@ -81,7 +81,7 @@ public class ReIndexAction extends BaseRestHandler {
             // TODO make async and allow control of process from external (e.g. stopping etc)
             // or just move stuff into a river?
             reindex(rsp, newIndexName, newType, withVersion, waitInSeconds);
-            logger.info("Finished copying of index " + searchIndexName + " into " + newIndexName + ", query " + filter);
+            logger.info("Finished reindexing of index " + searchIndexName + " into " + newIndexName + ", query " + filter);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
             try {
@@ -133,7 +133,7 @@ public class ReIndexAction extends BaseRestHandler {
 
             updateWatch.stop();
             collectedResults += currentResults;
-            logger.info("Progress " + collectedResults + "/" + total
+            logger.debug("Progress " + collectedResults + "/" + total
                     + ". Time of update:" + updateWatch.totalTime().getSeconds() + " query:"
                     + queryWatch.totalTime().getSeconds() + " failed:" + failed);
         }
