@@ -14,7 +14,7 @@ Apache License 2.0
 
 # Installation
 
-./reinstall.sh
+> ./reinstall.sh
 
 you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh script for development purposes
 
