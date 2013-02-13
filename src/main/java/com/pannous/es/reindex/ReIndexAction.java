@@ -176,9 +176,7 @@ public class ReIndexAction extends BaseRestHandler {
                 }
                 return list;
             }
-
         }
-
         return Collections.emptyList();
     }
 }
