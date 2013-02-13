@@ -14,15 +14,7 @@ Apache License 2.0
 
 # Installation
 
-> mvn -DskipTests clean package
-
-> // # TODO since github removed the download TAB we need to find an alternative hosting solution!
-
-> // # TODO sudo $ES_HOME/bin/plugin install karussell/elasticsearch-reindex
-
-> // sudo $ES_HOME/bin/plugin -url ./target -install reindex
-
-> sudo service elasticsearch restart
+./reinstall.sh
 
 you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh script for development purposes
 
