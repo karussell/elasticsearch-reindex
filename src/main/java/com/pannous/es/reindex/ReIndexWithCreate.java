@@ -66,7 +66,9 @@ public class ReIndexWithCreate extends BaseRestHandler {
             channel.sendResponse(new StringRestResponse(RestStatus.INTERNAL_SERVER_ERROR, str));
             return;
         }
-        copyAliases(request);
+        
+        // TODO: what if queries goes to the old index while we reindexed?
+        // now reindex
         reindexAction.handleRequest(request, channel);
 
         boolean delete = request.paramAsBoolean("delete", false);
@@ -78,10 +80,8 @@ public class ReIndexWithCreate extends BaseRestHandler {
                 client.admin().indices().delete(new DeleteIndexRequest(searchIndexName)).actionGet();
             }
         }
-
-        boolean aliasIncludeIndex = request.paramAsBoolean("addOldIndexAsAlias", false);
-        if (aliasIncludeIndex)
-            addOldIndexAsAlias(request);
+        
+        copyAliases(request);
     }
 
     /**
@@ -105,25 +105,20 @@ public class ReIndexWithCreate extends BaseRestHandler {
     private void copyAliases(RestRequest request) {
         String index = request.param("index");
         String searchIndexName = request.param("searchIndex");
-        IndexMetaData meta = client.admin().cluster().state(new ClusterStateRequest()).actionGet().state().metaData().index(searchIndexName);
+        IndexMetaData meta = client.admin().cluster().state(new ClusterStateRequest()).
+                actionGet().state().metaData().index(searchIndexName);
         IndicesAliasesRequest aReq = new IndicesAliasesRequest();
         for (String oldAlias : meta.aliases().keySet()) {
             aReq.addAlias(index, oldAlias);
         }
-        client.admin().indices().aliases(aReq).actionGet();
-    }
-
-    private void addOldIndexAsAlias(RestRequest request) {
-        String searchIndexName = request.param("searchIndex");
-        String index = request.param("index");
-
-        if (client.admin().indices().exists(new IndicesExistsRequest(searchIndexName)).actionGet().exists()) {
-            logger.warn("Couldn't add old indexName as alias as index still exists");
-            return;
+        boolean aliasIncludeIndex = request.paramAsBoolean("addOldIndexAsAlias", false);
+        if (aliasIncludeIndex) {
+            if (client.admin().indices().exists(new IndicesExistsRequest(searchIndexName)).actionGet().exists())
+                logger.warn("Cannot add old index name (" + searchIndexName + ") as alias to index "
+                        + index + " - as old index still exists");
+            else
+                aReq.addAlias(index, searchIndexName);
         }
-
-        IndicesAliasesRequest aReq = new IndicesAliasesRequest();
-        aReq.addAlias(index, searchIndexName);
         client.admin().indices().aliases(aReq).actionGet();
     }
 }
