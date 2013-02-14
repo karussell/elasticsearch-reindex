@@ -82,6 +82,10 @@ public class ReIndexAction extends BaseRestHandler {
             // TODO make async and allow control of process from external (e.g. stopping etc)
             // or just move stuff into a river?
             reindex(rsp, newIndexName, newType, withVersion, waitInSeconds);
+            
+            // TODO reindex again all new items => therefor we need a timestamp field to filter
+            // + how to combine with existing filter?
+            
             logger.info("Finished reindexing of index " + searchIndexName + " into " + newIndexName + ", query " + filter);
             channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
