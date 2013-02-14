@@ -66,7 +66,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
             channel.sendResponse(new StringRestResponse(RestStatus.INTERNAL_SERVER_ERROR, str));
             return;
         }
-        
+
         // TODO: what if queries goes to the old index while we reindexed?
         // now reindex
         reindexAction.handleRequest(request, channel);
@@ -80,8 +80,10 @@ public class ReIndexWithCreate extends BaseRestHandler {
                 client.admin().indices().delete(new DeleteIndexRequest(searchIndexName)).actionGet();
             }
         }
-        
-        copyAliases(request);
+
+        boolean copyAliases = request.paramAsBoolean("copyAliases", false);
+        if (copyAliases)
+            copyAliases(request);
     }
 
     /**
