@@ -59,15 +59,16 @@ public class ReIndexAction extends BaseRestHandler {
             if (searchType == null || searchType.isEmpty())
                 searchType = newType;
 
+            int searchPort = request.paramAsInt("searchPort", 9200);
+            String searchHost = request.param("searchHost", "localhost");
+            boolean localAction = "localhost".equals(searchHost) && searchPort == 9200;
             boolean withVersion = request.paramAsBoolean("withVersion", false);
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 30);
             int hitsPerPage = request.paramAsInt("hitsPerPage", 1000);
             int waitInSeconds = request.paramAsInt("waitInSeconds", 0);
             String filter = request.content().toUtf8();
-            int searchPort = request.paramAsInt("searchPort", 9200);
-            String searchHost = request.param("searchHost", "localhost");
             MySearchResponse rsp;
-            if ("localhost".equals(searchHost) && searchPort == 9200) {
+            if (localAction) {
                 SearchRequestBuilder srb = createScrollSearch(searchIndexName, searchType, filter,
                         hitsPerPage, withVersion, keepTimeInMinutes);
                 SearchResponse sr = srb.execute().actionGet();

@@ -24,7 +24,7 @@ public class ReIndexPlugin extends AbstractPlugin {
     @Override public void processModule(Module module) {
         if (module instanceof RestModule) {
             ((RestModule) module).addRestAction(ReIndexAction.class);
-            ((RestModule) module).addRestAction(ReIndexAllAction.class);
+            ((RestModule) module).addRestAction(ReIndexWithCreate.class);
             // logger.info("NOW " + action.getFeed("test"));
         }
     }
