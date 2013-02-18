@@ -64,7 +64,7 @@ public class ReIndexAction extends BaseRestHandler {
             boolean localAction = "localhost".equals(searchHost) && searchPort == 9200;
             boolean withVersion = request.paramAsBoolean("withVersion", false);
             int keepTimeInMinutes = request.paramAsInt("keepTimeInMinutes", 30);
-            int hitsPerPage = request.paramAsInt("hitsPerPage", 100);
+            int hitsPerPage = request.paramAsInt("hitsPerPage", 1000);
             float waitInSeconds = request.paramAsFloat("waitInSeconds", 0);
             String filter = request.contentAsString();
             MySearchResponse rsp;
