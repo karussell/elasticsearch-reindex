@@ -20,7 +20,6 @@ import org.elasticsearch.rest.RestRequest;
 import static org.elasticsearch.rest.RestRequest.Method.*;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.rest.StringRestResponse;
-import org.elasticsearch.rest.XContentThrowableRestResponse;
 
 /**
  * @author Peter Karich
@@ -36,7 +35,9 @@ public class ReIndexWithCreate extends BaseRestHandler {
         controller.registerHandler(PUT, "/_reindex", this);
         controller.registerHandler(POST, "/_reindex", this);
 
-        reindexAction = new ReIndexAction(settings, client, controller);
+        // give null controller as argument to avoid registering twice
+        // which would lead to an assert exception
+        reindexAction = new ReIndexAction(settings, client, null);
     }
 
     @Override public void handleRequest(RestRequest request, RestChannel channel) {
