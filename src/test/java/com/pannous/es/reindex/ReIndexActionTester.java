@@ -19,8 +19,8 @@ import org.json.JSONObject;
 import org.testng.annotations.BeforeMethod;
 
 /**
- * This test will be called from the ElasticSearch and from the 'JSON' implementation. (to avoid
- * code duplication)
+ * This test will be called from the ElasticSearch and from the 'JSON'
+ * implementation. (to avoid code duplication)
  *
  * @author Peter Karich
  */
@@ -49,8 +49,8 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         return scrollSearch(searchIndex, searchType, query, 10, false, 1);
     }
 
-    protected abstract MySearchResponse scrollSearch(String searchIndex, String searchType, String query, int hits,
-            boolean withVersion, int keepMinutes);
+    protected abstract MySearchResponse scrollSearch(String searchIndex, String searchType,
+            String filter, int hits, boolean withVersion, int keepMinutes);
 
     @Test public void reindexAll() throws Exception {
         add("oldtweets", "tweet", "{ \"name\" : \"hello world\", \"count\" : 1}");

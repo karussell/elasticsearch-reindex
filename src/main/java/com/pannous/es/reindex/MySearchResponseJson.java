@@ -55,8 +55,9 @@ class MySearchResponseJson implements MySearchResponse {
     private final long totalHits;
     private long bytes;
 
-    public MySearchResponseJson(String searchHost, int searchPort, String searchIndexName, String searchType,
-            String filter, int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
+    public MySearchResponseJson(String searchHost, int searchPort, String searchIndexName,
+            String searchType, String filter, String credentials,
+            int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
         if (!searchHost.startsWith("http"))
             searchHost = "http://" + searchHost;
         this.host = searchHost;
@@ -68,6 +69,7 @@ class MySearchResponseJson implements MySearchResponse {
         connManager.setMaxTotal(10);
         BasicHttpParams httpParams = new BasicHttpParams();
         HttpConnectionParams.setConnectionTimeout(httpParams, timeout);
+        httpParams.setParameter("Authentication", "Basic " + credentials);
         client = new DefaultHttpClient(connManager, httpParams);
 
         // initial query to get scroll id for our specific search
