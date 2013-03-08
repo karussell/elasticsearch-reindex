@@ -31,6 +31,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
@@ -54,6 +55,7 @@ class MySearchResponseJson implements MySearchResponse {
     private final boolean withVersion;
     private final long totalHits;
     private long bytes;
+    private String credentials = "";
 
     public MySearchResponseJson(String searchHost, int searchPort, String searchIndexName,
             String searchType, String filter, String credentials,
@@ -69,8 +71,10 @@ class MySearchResponseJson implements MySearchResponse {
         connManager.setMaxTotal(10);
         BasicHttpParams httpParams = new BasicHttpParams();
         HttpConnectionParams.setConnectionTimeout(httpParams, timeout);
-        httpParams.setParameter("Authentication", "Basic " + credentials);
         client = new DefaultHttpClient(connManager, httpParams);
+        // does not work!? client.getParams().setParameter("Authorization", "Basic " + credentials);
+        if (credentials != null)
+            this.credentials = credentials;        
 
         // initial query to get scroll id for our specific search
         try {
@@ -186,7 +190,7 @@ class MySearchResponseJson implements MySearchResponse {
     public JSONObject doGet(String url) throws JSONException {
         HttpGet http = new HttpGet(url);
         try {
-            http.setHeader("Content-Type", "application/json; charset=utf-8");
+            addHeaders(http);
             HttpResponse rsp = client.execute(http);
             int ret = rsp.getStatusLine().getStatusCode();
             if (ret / 200 == 1)
@@ -202,13 +206,17 @@ class MySearchResponseJson implements MySearchResponse {
         }
     }
 
+    private void addHeaders(HttpRequestBase http) {
+        http.setHeader("Content-Type", "application/json; charset=utf-8");
+        if (!credentials.isEmpty())
+            http.setHeader("Authorization", "Basic " + credentials);
+    }
+
     public String requestContent(HttpEntityEnclosingRequestBase http, String content) {
         try {
-            // new UrlEncodedFormEntity
+            addHeaders(http);
             StringEntity sendentity = new StringEntity(content, "UTF-8");
             http.setEntity(sendentity);
-            http.setHeader("Content-Type", "application/json; charset=utf-8");
-
             HttpResponse rsp = client.execute(http);
             int ret = rsp.getStatusLine().getStatusCode();
             if (ret / 200 == 1)

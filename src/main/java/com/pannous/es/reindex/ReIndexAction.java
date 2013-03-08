@@ -48,7 +48,7 @@ public class ReIndexAction extends BaseRestHandler {
     }
 
     @Override public void handleRequest(RestRequest request, RestChannel channel) {
-        logger.info("ReIndexAction.handleRequest [{}]", request.toString());
+        logger.info("ReIndexAction.handleRequest [{}]", request.params());
         try {
             XContentBuilder builder = restContentBuilder(request);
             String newIndexName = request.param("index");
