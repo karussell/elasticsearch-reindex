@@ -1,6 +1,6 @@
 package com.pannous.es.reindex;
 
-public class ReIndexActionJsonTests extends ReIndexActionTester {
+public class ReIndexActionJsonTest extends ReIndexActionTester {
 
     @Override
     protected MySearchResponse scrollSearch(String searchIndex, String type, String filter, int hits,

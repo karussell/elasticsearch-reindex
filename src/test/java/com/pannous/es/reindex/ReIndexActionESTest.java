@@ -2,7 +2,7 @@ package com.pannous.es.reindex;
 
 import org.elasticsearch.action.search.SearchRequestBuilder;
 
-public class ReIndexActionESTests extends ReIndexActionTester {
+public class ReIndexActionESTest extends ReIndexActionTester {
 
     @Override
     protected MySearchResponse scrollSearch(String index, String type, String query, int hits,
