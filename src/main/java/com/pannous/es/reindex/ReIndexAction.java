@@ -36,7 +36,7 @@ import static org.elasticsearch.rest.action.support.RestXContentBuilder.*;
  * @author Peter Karich
  */
 public class ReIndexAction extends BaseRestHandler {
-
+    
     @Inject public ReIndexAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
 
@@ -46,8 +46,12 @@ public class ReIndexAction extends BaseRestHandler {
             controller.registerHandler(POST, "/{index}/{type}/_reindex", this);
         }
     }
-
+    
     @Override public void handleRequest(RestRequest request, RestChannel channel) {
+        handleRequest(request, channel, null, false);
+    }
+
+    public void handleRequest(RestRequest request, RestChannel channel, String newTypeOverride, boolean internalCall) {
         logger.info("ReIndexAction.handleRequest [{}]", request.params());
         try {
             XContentBuilder builder = restContentBuilder(request);
@@ -56,8 +60,8 @@ public class ReIndexAction extends BaseRestHandler {
             if (searchIndexName == null || searchIndexName.isEmpty())
                 searchIndexName = newIndexName;
 
-            String newType = request.param("type");
-            String searchType = request.param("searchType");
+            String newType = newTypeOverride != null ? newTypeOverride : request.param("type");
+            String searchType = newTypeOverride != null ? newTypeOverride : request.param("searchType");
             if (searchType == null || searchType.isEmpty())
                 searchType = newType;
 
@@ -90,12 +94,19 @@ public class ReIndexAction extends BaseRestHandler {
             // + how to combine with existing filter?
 
             logger.info("Finished reindexing of index " + searchIndexName + " into " + newIndexName + ", query " + filter);
-            channel.sendResponse(new XContentRestResponse(request, OK, builder));
+            
+            if (!internalCall)
+                channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
-            try {
-                channel.sendResponse(new XContentThrowableRestResponse(request, ex));
-            } catch (Exception ex2) {
-                logger.error("problem while rolling index", ex2);
+            if (!internalCall) {
+                try {
+                    channel.sendResponse(new XContentThrowableRestResponse(request, ex));
+                } catch (Exception ex2) {
+                    logger.error("problem while rolling index", ex2);
+                }
+            }
+            else {
+                throw new RuntimeException(ex);
             }
         }
     }
