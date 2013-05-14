@@ -42,7 +42,7 @@ class MySearchResponseES implements MySearchResponse {
     }
 
     @Override public MySearchHits hits() {
-        final SearchHits hits = rsp.hits();
+        final SearchHits hits = rsp.getHits();
         // uh iterable is strange
         return new MySearchHits() {
             @Override public Iterable<MySearchHit> getHits() {
@@ -79,12 +79,12 @@ class MySearchResponseES implements MySearchResponse {
     }
 
     @Override public String scrollId() {
-        return rsp.scrollId();
+        return rsp.getScrollId();
     }
 
     @Override public int doScoll() {
         rsp = client.prepareSearchScroll(scrollId()).setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes)).execute().actionGet();
-        return rsp.hits().hits().length;
+        return rsp.getHits().hits().length;
     }
 
     @Override

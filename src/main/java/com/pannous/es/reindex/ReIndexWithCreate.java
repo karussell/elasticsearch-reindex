@@ -70,7 +70,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
             }
             int newShards = request.paramAsInt("newIndexShards", -1);
             try {
-                if(client.admin().indices().exists(new IndicesExistsRequest(newIndexName)).actionGet().exists()) {
+                if(client.admin().indices().exists(new IndicesExistsRequest(newIndexName)).actionGet().isExists()) {
                     logger.info("target index already exists, skip creation: " + newIndexName);
                 }
                 else {
@@ -89,7 +89,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
             if(type.equals("*")) {
 
                 IndexMetaData indexData = client.admin().cluster().state(new ClusterStateRequest()).
-                        actionGet().state().metaData().indices().get(searchIndexName);
+                        actionGet().getState().metaData().indices().get(searchIndexName);
                 Settings searchIndexSettings = indexData.settings();
 
                 for(Map.Entry<String, MappingMetaData> me : indexData.mappings().entrySet()) {
@@ -108,8 +108,8 @@ public class ReIndexWithCreate extends BaseRestHandler {
                 logger.info("refreshing " + searchIndexName);
                 client.admin().indices().refresh(new RefreshRequest(newIndexName)).actionGet();
             
-                long oldCount = client.count(new CountRequest(searchIndexName)).actionGet().count();
-                long newCount = client.count(new CountRequest(newIndexName)).actionGet().count();
+                long oldCount = client.count(new CountRequest(searchIndexName)).actionGet().getCount();
+                long newCount = client.count(new CountRequest(newIndexName)).actionGet().getCount();
                 if (oldCount == newCount) {
                     logger.info("deleting " + searchIndexName);
                     client.admin().indices().delete(new DeleteIndexRequest(searchIndexName)).actionGet();
@@ -137,7 +137,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
     private void createIdenticalIndex(String oldIndex, String type,
             String newIndex, int newIndexShards) throws IOException {
         IndexMetaData indexData = client.admin().cluster().state(new ClusterStateRequest()).
-                actionGet().state().metaData().indices().get(oldIndex);
+                actionGet().getState().metaData().indices().get(oldIndex);
         Settings searchIndexSettings = indexData.settings();
         ImmutableSettings.Builder settingBuilder = ImmutableSettings.settingsBuilder().put(searchIndexSettings);
         if (newIndexShards > 0)
@@ -166,7 +166,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
         String index = request.param("index");
         String searchIndexName = request.param("searchIndex");
         IndexMetaData meta = client.admin().cluster().state(new ClusterStateRequest()).
-                actionGet().state().metaData().index(searchIndexName);
+                actionGet().getState().metaData().index(searchIndexName);
         IndicesAliasesRequest aReq = new IndicesAliasesRequest();
         boolean empty = true;
         if(meta != null && meta.aliases() != null) {
@@ -177,7 +177,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
         }
         boolean aliasIncludeIndex = request.paramAsBoolean("addOldIndexAsAlias", false);
         if (aliasIncludeIndex) {
-            if (client.admin().indices().exists(new IndicesExistsRequest(searchIndexName)).actionGet().exists()) {
+            if (client.admin().indices().exists(new IndicesExistsRequest(searchIndexName)).actionGet().isExists()) {
                 logger.warn("Cannot add old index name (" + searchIndexName + ") as alias to index "
                         + index + " - as old index still exists");
             }

@@ -66,9 +66,9 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         // now check if content was correctly streamed and saved
         SearchResponse sr = client.prepareSearch("tweets").
                 addSort("count", SortOrder.ASC).execute().actionGet();
-        assertThat(sr.hits().hits().length, equalTo(2));
-        assertThat(new JSONObject(sr.hits().hits()[0].sourceAsString()).getString("name"), equalTo("hello world"));
-        assertThat(new JSONObject(sr.hits().hits()[1].sourceAsString()).getString("name"), equalTo("peter ä test"));
+        assertThat(sr.getHits().hits().length, equalTo(2));
+        assertThat(new JSONObject(sr.getHits().hits()[0].sourceAsString()).getString("name"), equalTo("hello world"));
+        assertThat(new JSONObject(sr.getHits().hits()[1].sourceAsString()).getString("name"), equalTo("peter ä test"));
     }
 
     @Test public void reindexAllPartial() throws Exception {
@@ -81,8 +81,8 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         refresh("tweets");
         assertThat(count("tweets"), equalTo(1L));
         SearchResponse sr = client.prepareSearch("tweets").execute().actionGet();
-        assertThat(sr.hits().hits().length, equalTo(1));
-        assertThat(new JSONObject(sr.hits().hits()[0].sourceAsString()).getString("name"), equalTo("peter test"));
+        assertThat(sr.getHits().hits().length, equalTo(1));
+        assertThat(new JSONObject(sr.getHits().hits()[0].sourceAsString()).getString("name"), equalTo("peter test"));
     }
 
     private void add(String index, String type, String json) {
@@ -94,6 +94,6 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
     }
 
     private long count(String index) {
-        return client.count(new CountRequest(index)).actionGet().count();
+        return client.count(new CountRequest(index)).actionGet().getCount();
     }
 }
