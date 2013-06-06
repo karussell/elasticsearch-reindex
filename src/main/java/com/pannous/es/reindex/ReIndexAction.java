@@ -36,7 +36,7 @@ import static org.elasticsearch.rest.action.support.RestXContentBuilder.*;
  * @author Peter Karich
  */
 public class ReIndexAction extends BaseRestHandler {
-    
+
     @Inject public ReIndexAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
 
@@ -46,7 +46,7 @@ public class ReIndexAction extends BaseRestHandler {
             controller.registerHandler(POST, "/{index}/{type}/_reindex", this);
         }
     }
-    
+
     @Override public void handleRequest(RestRequest request, RestChannel channel) {
         handleRequest(request, channel, null, false);
     }
@@ -94,7 +94,7 @@ public class ReIndexAction extends BaseRestHandler {
             // + how to combine with existing filter?
 
             logger.info("Finished reindexing of index " + searchIndexName + " into " + newIndexName + ", query " + filter);
-            
+
             if (!internalCall)
                 channel.sendResponse(new XContentRestResponse(request, OK, builder));
         } catch (IOException ex) {
@@ -104,14 +104,13 @@ public class ReIndexAction extends BaseRestHandler {
                 } catch (Exception ex2) {
                     logger.error("problem while rolling index", ex2);
                 }
-            }
-            else {
+            } else {
                 throw new RuntimeException(ex);
             }
         }
     }
 
-    SearchRequestBuilder createScrollSearch(String oldIndexName, String oldType, String filter,
+    public SearchRequestBuilder createScrollSearch(String oldIndexName, String oldType, String filter,
             int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
         SearchRequestBuilder srb = client.prepareSearch(oldIndexName).
                 setTypes(oldType).
@@ -144,9 +143,12 @@ public class ReIndexAction extends BaseRestHandler {
             if (currentResults == 0)
                 break;
 
+            MySearchHits res = callback(rsp.hits());
+            if (res == null)
+                break;
             queryWatch.stop();
             StopWatch updateWatch = new StopWatch().start();
-            failed += bulkUpdate(rsp.hits(), newIndex, newType, withVersion).size();
+            failed += bulkUpdate(res, newIndex, newType, withVersion).size();
             if (flushEnabled)
                 client.admin().indices().flush(new FlushRequest(newIndex)).actionGet();
 
@@ -196,5 +198,9 @@ public class ReIndexAction extends BaseRestHandler {
             }
         }
         return Collections.emptyList();
+    }
+
+    protected MySearchHits callback(MySearchHits hits) {
+        return hits;
     }
 }

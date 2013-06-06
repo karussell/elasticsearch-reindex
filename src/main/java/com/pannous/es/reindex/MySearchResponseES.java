@@ -23,12 +23,12 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 
 /**
- * Searches with the given client - used for the same cluster. Not suited for other clusters as they
- * could have an incompatible version.
+ * Searches with the given client - used for the same cluster. Not suited for
+ * other clusters as they could have an incompatible version.
  *
  * @author Peter Karich
  */
-class MySearchResponseES implements MySearchResponse {
+public class MySearchResponseES implements MySearchResponse {
 
     private SearchResponse rsp;
     private final int keepTimeInMinutes;

@@ -43,7 +43,7 @@ import org.json.JSONObject;
 /**
  * @author Peter Karich
  */
-class MySearchResponseJson implements MySearchResponse {
+public class MySearchResponseJson implements MySearchResponse {
 
     private int timeout = 20000;
     private HttpClient client;
