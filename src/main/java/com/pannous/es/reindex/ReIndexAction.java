@@ -189,10 +189,10 @@ public class ReIndexAction extends BaseRestHandler {
         if (brb.numberOfActions() > 0) {
             BulkResponse rsp = brb.execute().actionGet();
             if (rsp.hasFailures()) {
-                List<Integer> list = new ArrayList<Integer>(rsp.getItems().length);
-                for (BulkItemResponse br : rsp.getItems()) {
+                List<Integer> list = new ArrayList<Integer>(rsp.items().length);
+                for (BulkItemResponse br : rsp.items()) {
                     if (br.isFailed())
-                        list.add(br.getItemId());
+                        list.add(br.itemId());
                 }
                 return list;
             }
