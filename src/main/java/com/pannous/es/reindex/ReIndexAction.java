@@ -1,11 +1,5 @@
 package com.pannous.es.reindex;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import org.elasticsearch.action.admin.indices.flush.FlushRequest;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -15,20 +9,23 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
-import org.elasticsearch.common.StopWatch;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.rest.BaseRestHandler;
-import org.elasticsearch.rest.RestChannel;
-import org.elasticsearch.rest.RestController;
-import org.elasticsearch.rest.RestRequest;
-import org.elasticsearch.rest.XContentRestResponse;
-import org.elasticsearch.rest.XContentThrowableRestResponse;
-import static org.elasticsearch.rest.RestRequest.Method.*;
-import static org.elasticsearch.rest.RestStatus.*;
-import static org.elasticsearch.rest.action.support.RestXContentBuilder.*;
+import org.elasticsearch.rest.*;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import static org.elasticsearch.rest.RestRequest.Method.POST;
+import static org.elasticsearch.rest.RestRequest.Method.PUT;
+import static org.elasticsearch.rest.RestStatus.OK;
+import static org.elasticsearch.rest.action.support.RestXContentBuilder.restContentBuilder;
 
 /**
  * Refeeds all the documents which matches the type and the (optional) query.
@@ -37,7 +34,8 @@ import static org.elasticsearch.rest.action.support.RestXContentBuilder.*;
  */
 public class ReIndexAction extends BaseRestHandler {
 
-    @Inject public ReIndexAction(Settings settings, Client client, RestController controller) {
+    @Inject
+    public ReIndexAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
 
         if (controller != null) {
@@ -47,7 +45,8 @@ public class ReIndexAction extends BaseRestHandler {
         }
     }
 
-    @Override public void handleRequest(RestRequest request, RestChannel channel) {
+    @Override
+    public void handleRequest(RestRequest request, RestChannel channel) {
         handleRequest(request, channel, null, false);
     }
 
@@ -111,7 +110,7 @@ public class ReIndexAction extends BaseRestHandler {
     }
 
     public SearchRequestBuilder createScrollSearch(String oldIndexName, String oldType, String filter,
-            int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
+                                                   int hitsPerPage, boolean withVersion, int keepTimeInMinutes) {
         SearchRequestBuilder srb = client.prepareSearch(oldIndexName).
                 setTypes(oldType).
                 setVersion(withVersion).
@@ -124,80 +123,14 @@ public class ReIndexAction extends BaseRestHandler {
         return srb;
     }
 
-    public int reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion,
-            float waitSeconds) {
-        boolean flushEnabled = false;
-        long total = rsp.hits().totalHits();
-        int collectedResults = 0;
-        int failed = 0;
-        while (true) {
-            if (collectedResults > 0 && waitSeconds > 0) {
-                try {
-                    Thread.sleep(Math.round(waitSeconds * 1000));
-                } catch (InterruptedException ex) {
-                    break;
-                }
-            }
-            StopWatch queryWatch = new StopWatch().start();
-            int currentResults = rsp.doScoll();
-            if (currentResults == 0)
-                break;
+    public Thread reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion,
+                          float waitSeconds) {
 
-            MySearchHits res = callback(rsp.hits());
-            if (res == null)
-                break;
-            queryWatch.stop();
-            StopWatch updateWatch = new StopWatch().start();
-            failed += bulkUpdate(res, newIndex, newType, withVersion).size();
-            if (flushEnabled)
-                client.admin().indices().flush(new FlushRequest(newIndex)).actionGet();
+        Indexer indexer = new Indexer(client, rsp, newIndex, newType, withVersion, waitSeconds);
+        Thread indexerThread = EsExecutors.daemonThreadFactory(settings, this.getClass().getCanonicalName()).newThread(indexer);
+        indexerThread.start();
 
-            updateWatch.stop();
-            collectedResults += currentResults;
-            logger.debug("Progress " + collectedResults + "/" + total
-                    + ". Time of update:" + updateWatch.totalTime().getSeconds() + " query:"
-                    + queryWatch.totalTime().getSeconds() + " failed:" + failed);
-        }
-        String str = "found " + total + ", collected:" + collectedResults
-                + ", transfered:" + (float) rsp.bytes() / (1 << 20) + "MB";
-        if (failed > 0)
-            logger.warn(failed + " FAILED documents! " + str);
-        else
-            logger.info(str);
-        return collectedResults;
-    }
-
-    Collection<Integer> bulkUpdate(MySearchHits objects, String indexName,
-            String newType, boolean withVersion) {
-        BulkRequestBuilder brb = client.prepareBulk();
-        for (MySearchHit hit : objects.getHits()) {
-            if (hit.id() == null || hit.id().isEmpty()) {
-                logger.warn("Skipped object without id when bulkUpdate:" + hit);
-                continue;
-            }
-
-            try {
-                IndexRequest indexReq = Requests.indexRequest(indexName).type(newType).id(hit.id()).source(hit.source());
-                if (withVersion)
-                    indexReq.version(hit.version());
-
-                brb.add(indexReq);
-            } catch (Exception ex) {
-                logger.warn("Cannot add object:" + hit + " to bulkIndexing action." + ex.getMessage());
-            }
-        }
-        if (brb.numberOfActions() > 0) {
-            BulkResponse rsp = brb.execute().actionGet();
-            if (rsp.hasFailures()) {
-                List<Integer> list = new ArrayList<Integer>(rsp.items().length);
-                for (BulkItemResponse br : rsp.items()) {
-                    if (br.isFailed())
-                        list.add(br.itemId());
-                }
-                return list;
-            }
-        }
-        return Collections.emptyList();
+        return indexerThread;
     }
 
     protected MySearchHits callback(MySearchHits hits) {
