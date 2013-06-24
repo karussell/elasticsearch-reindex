@@ -1,14 +1,9 @@
 package com.pannous.es.reindex;
 
-import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.bulk.BulkResponse;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
@@ -17,10 +12,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
@@ -126,14 +117,14 @@ public class ReIndexAction extends BaseRestHandler {
     public Thread reindex(MySearchResponse rsp, String newIndex, String newType, boolean withVersion,
                           float waitSeconds) {
 
-        Indexer indexer = new Indexer(client, rsp, newIndex, newType, withVersion, waitSeconds);
+        Indexer indexer = new Indexer(client, callback(rsp.hits()), rsp, newIndex, newType, withVersion, waitSeconds);
         Thread indexerThread = EsExecutors.daemonThreadFactory(settings, this.getClass().getCanonicalName()).newThread(indexer);
         indexerThread.start();
 
         return indexerThread;
     }
 
-    protected MySearchHits callback(MySearchHits hits) {
-        return hits;
+    protected HitsCallback callback(MySearchHits hits) {
+        return new HitsCallback();
     }
 }

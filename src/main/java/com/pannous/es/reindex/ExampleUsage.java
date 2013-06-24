@@ -1,9 +1,5 @@
 package com.pannous.es.reindex;
 
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Logger;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
@@ -14,6 +10,11 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.rest.RestController;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Class to use the reindex plugin as rewrite/refeed plugin - directly from
@@ -60,23 +61,30 @@ public class ExampleUsage {
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         RestController contrl = new RestController(emptySettings);
         ReIndexAction action = new ReIndexAction(emptySettings, client, contrl) {
-            @Override protected MySearchHits callback(MySearchHits hits) {
-                SimpleList res = new SimpleList(hitsPerPage, hits.totalHits());
-                for (MySearchHit h : hits.getHits()) {
-                    try {
-                        String str = new String(h.source(), charset);
-                        RewriteSearchHit newHit = new RewriteSearchHit(h.id(), h.version(), str);
-                        String someField = newHit.get("some_field");
-                        if (someField.contains("some content")) {
-                            newHit.put("some_field", "IT WORKS!");
-                        }
+            @Override
+            protected HitsCallback callback(MySearchHits hits) {
 
-                        res.add(newHit);
-                    } catch (UnsupportedEncodingException ex) {
-                        throw new RuntimeException(ex);
+                return new HitsCallback() {
+                    @Override
+                    public MySearchHits transform(MySearchHits hits) {
+                        SimpleList res = new SimpleList(hitsPerPage, hits.totalHits());
+                        for (MySearchHit h : hits.getHits()) {
+                            try {
+                                String str = new String(h.source(), charset);
+                                RewriteSearchHit newHit = new RewriteSearchHit(h.id(), h.version(), str);
+                                String someField = newHit.get("some_field");
+                                if (someField.contains("some content")) {
+                                    newHit.put("some_field", "IT WORKS!");
+                                }
+
+                                res.add(newHit);
+                            } catch (UnsupportedEncodingException ex) {
+                                throw new RuntimeException(ex);
+                            }
+                        }
+                        return res;
                     }
-                }
-                return res;
+                };
             }
         };
         // first query, further scroll-queries in reindex!
@@ -105,7 +113,8 @@ public class ExampleUsage {
             hits.add(hit);
         }
 
-        @Override public Iterable<MySearchHit> getHits() {
+        @Override
+        public Iterable<MySearchHit> getHits() {
             return hits;
         }
 
@@ -152,15 +161,18 @@ public class ExampleUsage {
             }
         }
 
-        @Override public String id() {
+        @Override
+        public String id() {
             return id;
         }
 
-        @Override public long version() {
+        @Override
+        public long version() {
             return version;
         }
 
-        @Override public byte[] source() {
+        @Override
+        public byte[] source() {
             try {
                 return json.toString().getBytes(charset);
             } catch (UnsupportedEncodingException ex) {

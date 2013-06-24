@@ -25,9 +25,11 @@ public class Indexer implements Runnable {
     private String newType;
     private boolean withVersion;
     private float waitSeconds;
+    private HitsCallback callback;
 
 
-    public Indexer(Client client, MySearchResponse rsp, String newIndex, String newType, boolean withVersion, float waitSeconds) {
+    public Indexer(Client client, HitsCallback callback, MySearchResponse rsp, String newIndex, String newType, boolean withVersion, float waitSeconds) {
+        this.callback = callback;
 
         logger = Loggers.getLogger(this.getClass());
 
@@ -59,7 +61,7 @@ public class Indexer implements Runnable {
             if (currentResults == 0)
                 break;
 
-            MySearchHits res = rsp.hits();
+            MySearchHits res = callback.transform(rsp.hits());
             if (res == null)
                 break;
             queryWatch.stop();
