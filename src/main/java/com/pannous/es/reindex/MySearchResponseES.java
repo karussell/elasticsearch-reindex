@@ -83,7 +83,8 @@ public class MySearchResponseES implements MySearchResponse {
     }
 
     @Override public int doScoll() {
-        rsp = client.prepareSearchScroll(scrollId()).setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes)).execute().actionGet();
+        rsp = client.prepareSearchScroll(scrollId()).setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes)).
+                execute().actionGet();
         return rsp.getHits().hits().length;
     }
 
