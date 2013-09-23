@@ -123,7 +123,8 @@ public class MySearchResponseJson implements MySearchResponse {
                 JSONObject hitJson = arr.getJSONObject(i);
                 long version = -1;
                 String id = hitJson.getString("_id");
-                byte[] source = hitJson.getString("_source").getBytes("UTF-8");
+                String sourceStr = hitJson.getString("_source");
+                byte[] source = sourceStr.getBytes("UTF-8");
                 if (withVersion && hitJson.has("_version"))
                     version = hitJson.getLong("_version");
                 bytes += source.length;

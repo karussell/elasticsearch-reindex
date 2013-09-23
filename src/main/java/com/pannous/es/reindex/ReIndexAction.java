@@ -200,6 +200,9 @@ public class ReIndexAction extends BaseRestHandler {
         return Collections.emptyList();
     }
 
+    /**
+     * Can be used to be overwritten and to rewrite some fields of the hits.
+     */
     protected MySearchHits callback(MySearchHits hits) {
         return hits;
     }

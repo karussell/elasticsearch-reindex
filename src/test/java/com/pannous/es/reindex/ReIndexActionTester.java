@@ -1,5 +1,6 @@
 package com.pannous.es.reindex;
 
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.count.CountRequest;
@@ -7,6 +8,7 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.search.sort.SortOrder;
 import org.testng.annotations.AfterClass;
@@ -28,6 +30,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
 
     protected Client client;
     protected ReIndexAction action;
+    // protected String indexNames = "oldtweets,tweets";
 
     @BeforeClass public void createNodes() throws Exception {
         startNode("node1");
