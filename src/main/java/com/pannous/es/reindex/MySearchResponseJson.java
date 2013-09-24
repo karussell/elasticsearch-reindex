@@ -26,6 +26,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
 import org.apache.http.client.HttpClient;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
@@ -35,7 +36,10 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpProtocolParams;
+import org.apache.http.protocol.HTTP;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -69,9 +73,13 @@ public class MySearchResponseJson implements MySearchResponse {
         bufferedHits = new ArrayList<MySearchHit>(hitsPerPage);
         PoolingClientConnectionManager connManager = new PoolingClientConnectionManager();
         connManager.setMaxTotal(10);
-        BasicHttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, timeout);
-        client = new DefaultHttpClient(connManager, httpParams);
+        
+        BasicHttpParams params = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(params, timeout);      
+        HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
+        HttpProtocolParams.setContentCharset(params, "UTF-8");        
+        client = new DefaultHttpClient(connManager, params);                        
+        
         // does not work!? client.getParams().setParameter("Authorization", "Basic " + credentials);
         if (credentials != null)
             this.credentials = credentials;        
