@@ -120,7 +120,7 @@ public class ReIndexAction extends BaseRestHandler {
                 setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes));
 
         if (filter != null && !filter.trim().isEmpty())
-            srb.setFilter(filter);
+            srb.setPostFilter(filter);
         return srb;
     }
 

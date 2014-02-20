@@ -43,7 +43,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
     }
 
     @BeforeMethod public void setUp() {
-        client.admin().indices().delete(new DeleteIndexRequest()).actionGet();
+        client.admin().indices().delete(new DeleteIndexRequest("_all")).actionGet();
         Settings emptySettings = ImmutableSettings.settingsBuilder().build();
         action = new ReIndexAction(emptySettings, client, new RestController(emptySettings));
     }
