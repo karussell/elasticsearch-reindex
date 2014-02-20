@@ -17,7 +17,7 @@ Apache License 2.0
 
 > ./reinstall.sh
 
-you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh script for development purposes. Be sure to use elasticsearch 0.90.10. For newer versions - please provide pull requests ;)
+you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh script for development purposes. Be sure to use elasticsearch 1.0.0. For newer versions - please provide pull requests ;)
 
 
 # Deinstallation
