@@ -105,6 +105,12 @@ public class MySearchResponseES implements MySearchResponse {
             return sh.id();
         }
 
+        @Override public String parent() {
+           if (sh.field("_parent") != null)
+              return sh.field("_parent").value();
+           return "";
+        }
+
         @Override public long version() {
             return sh.version();
         }

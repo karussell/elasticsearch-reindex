@@ -131,12 +131,15 @@ public class MySearchResponseJson implements MySearchResponse {
                 JSONObject hitJson = arr.getJSONObject(i);
                 long version = -1;
                 String id = hitJson.getString("_id");
+                String parent = "";
+                if (hitJson.has("_parent"))
+                     parent = hitJson.getString("_parent");
                 String sourceStr = hitJson.getString("_source");
                 byte[] source = sourceStr.getBytes("UTF-8");
                 if (withVersion && hitJson.has("_version"))
                     version = hitJson.getLong("_version");
                 bytes += source.length;
-                MySearchHitJson res = new MySearchHitJson(id, source, version);
+                MySearchHitJson res = new MySearchHitJson(id, parent, source, version);
                 bufferedHits.add(res);
             }
             return bufferedHits.size();
@@ -153,17 +156,23 @@ public class MySearchResponseJson implements MySearchResponse {
     class MySearchHitJson implements MySearchHit {
 
         String id;
+        String parent;
         byte[] source;
         long version;
 
-        public MySearchHitJson(String id, byte[] source, long version) {
+        public MySearchHitJson(String id, String parent, byte[] source, long version) {
             this.id = id;
+            this.parent = parent;
             this.source = source;
             this.version = version;
         }
 
         @Override public String id() {
             return id;
+        }
+
+        @Override public String parent() {
+            return parent;
         }
 
         @Override public long version() {
