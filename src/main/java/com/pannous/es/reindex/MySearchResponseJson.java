@@ -91,10 +91,10 @@ public class MySearchResponseJson implements MySearchResponse {
 
             String query;
             if (filter == null || filter.isEmpty())
-                query = "{ \"query\" : {\"match_all\" : {}}}";
+                query = "{ \"query\" : {\"match_all\" : {}}, \"fields\" : [\"_source\", \"_parent\"]}";
             else
-                query = "{ \"filter\" : " + filter + "}";
-
+                query = "{ \"filter\" : " + filter + ", \"fields\" : [\"_source\", \"_parent\"] }";
+           
             JSONObject res = doPost(url, query);
             scrollId = res.getString("_scroll_id");
             totalHits = res.getJSONObject("hits").getLong("total");
@@ -134,6 +134,12 @@ public class MySearchResponseJson implements MySearchResponse {
                 String parent = "";
                 if (hitJson.has("_parent"))
                      parent = hitJson.getString("_parent");
+                if (hitJson.has("fields")) {
+                     JSONObject fields = hitJson.getJSONObject("fields");
+                     if (fields.has("_parent")) {
+                         parent = fields.getString("_parent");
+                    }
+                }
                 String sourceStr = hitJson.getString("_source");
                 byte[] source = sourceStr.getBytes("UTF-8");
                 if (withVersion && hitJson.has("_version"))
