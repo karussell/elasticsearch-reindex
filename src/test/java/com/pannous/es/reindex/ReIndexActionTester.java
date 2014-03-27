@@ -1,14 +1,16 @@
 package com.pannous.es.reindex;
 
-import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.count.CountRequest;
+import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.indices.IndexMissingException;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.search.sort.SortOrder;
 import org.testng.annotations.AfterClass;
@@ -56,8 +58,8 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
             String filter, int hits, boolean withVersion, int keepMinutes);
 
     @Test public void reindexAll() throws Exception {
-        add("oldtweets", "tweet", "{ \"name\" : \"hello world\", \"count\" : 1}");
-        add("oldtweets", "tweet", "{ \"name\" : \"peter ä test\", \"count\" : 2}");
+        add("oldtweets", "tweet", null, "{ \"name\" : \"hello world\", \"count\" : 1}");
+        add("oldtweets", "tweet", null, "{ \"name\" : \"peter ä test\", \"count\" : 2}");
         refresh("oldtweets");
         assertThat(count("oldtweets"), equalTo(2L));
 
@@ -75,8 +77,8 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
     }
 
     @Test public void reindexAllPartial() throws Exception {
-        add("oldtweets", "tweet", "{ \"name\" : \"hello world\", \"count\" : 1}");
-        add("oldtweets", "tweet", "{ \"name\" : \"peter test\", \"count\" : 2}");
+        add("oldtweets", "tweet", null, "{ \"name\" : \"hello world\", \"count\" : 1}");
+        add("oldtweets", "tweet", null, "{ \"name\" : \"peter test\", \"count\" : 2}");
         refresh("oldtweets");
         assertThat(count("oldtweets"), equalTo(2L));
         int res = action.reindex(scrollSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }"), "tweets", "tweet", false, 0);
@@ -88,8 +90,45 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         assertThat(new JSONObject(sr.getHits().hits()[0].sourceAsString()).getString("name"), equalTo("peter test"));
     }
 
-    private void add(String index, String type, String json) {
-        client.prepareIndex(index, type).setSource(json).execute().actionGet();
+    @Test public void reindexChilds() throws Exception {
+         String parent = add("oldtweets", "tweet", null, "{ \"name\" : \"hello world\", \"count\" : 1}");
+         // update the mapping settings for oldtweets childs (i.e retweet type)
+         client.admin().indices().preparePutMapping().setIndices("oldtweets").setType("retweet").setSource("{\"retweet\": { \"_parent\": { \"type\": \"tweet\" }, \"_routing\": { \"required\": true }, \"properties\": { \"name\": { \"type\": \"string\" }, \"count\": { \"type\": \"long\" } } }}").execute().actionGet();
+         String child = add("oldtweets", "retweet", parent, "{ \"name\" : \"RE: hello world\", \"count\" : 1, \"_parent\" : \"" + parent + "\"}");
+         refresh("oldtweets");
+         assertThat(count("oldtweets"), equalTo(2L));
+
+         int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false, 0);
+         assertThat(res, equalTo(1));
+         refresh("tweets");
+         assertThat(count("tweets"), equalTo(1L));
+
+         // update the mapping settings for oldtweets childs (i.e retweet type)
+         client.admin().indices().preparePutMapping().setIndices("tweets").setType("retweet").setSource("{\"retweet\": { \"_parent\": { \"type\": \"tweet\" }, \"_routing\": { \"required\": true }, \"properties\": { \"name\": { \"type\": \"string\" }, \"count\": { \"type\": \"long\" } } }}").execute().actionGet();
+
+         res = action.reindex(scrollSearch("oldtweets", "retweet", ""), "tweets", "retweet", false, 0);
+         assertThat(res, equalTo(1));
+         refresh("tweets");
+         assertThat(count("tweets"), equalTo(2L));
+
+        // now check if content was correctly streamed and saved
+        SearchResponse parent_sr = client.prepareSearch("tweets").setTypes("tweet")
+                .addSort("count", SortOrder.ASC).execute().actionGet();
+        assertThat(parent_sr.getHits().hits().length, equalTo(1));
+        String reindex_parent = parent_sr.getHits().hits()[0].id();
+
+        SearchResponse child_sr = client.prepareSearch("tweets").setTypes("retweet").setRouting(reindex_parent).setQuery(QueryBuilders.boolQuery().must(QueryBuilders.termQuery("_parent", reindex_parent)))
+                .addSort("count", SortOrder.ASC).execute().actionGet();
+        assertThat(child_sr.getHits().hits().length, equalTo(1));
+    }
+
+    private String add(String index, String type, String routing, String json) {
+        IndexRequestBuilder req =  client.prepareIndex(index, type).setSource(json);
+        if (routing != null) 
+            req.setRouting(routing);
+        
+        IndexResponse rsp = req.execute().actionGet();
+        return rsp.getId();
     }
 
     private void refresh(String index) {

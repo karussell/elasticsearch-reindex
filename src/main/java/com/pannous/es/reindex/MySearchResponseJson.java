@@ -91,10 +91,10 @@ public class MySearchResponseJson implements MySearchResponse {
 
             String query;
             if (filter == null || filter.isEmpty())
-                query = "{ \"query\" : {\"match_all\" : {}}}";
+                query = "{ \"query\" : {\"match_all\" : {}}, \"fields\" : [\"_source\", \"_parent\"]}";
             else
-                query = "{ \"filter\" : " + filter + "}";
-
+                query = "{ \"filter\" : " + filter + ", \"fields\" : [\"_source\", \"_parent\"] }";
+           
             JSONObject res = doPost(url, query);
             scrollId = res.getString("_scroll_id");
             totalHits = res.getJSONObject("hits").getLong("total");
@@ -131,12 +131,21 @@ public class MySearchResponseJson implements MySearchResponse {
                 JSONObject hitJson = arr.getJSONObject(i);
                 long version = -1;
                 String id = hitJson.getString("_id");
+                String parent = "";
+                if (hitJson.has("_parent"))
+                     parent = hitJson.getString("_parent");
+                if (hitJson.has("fields")) {
+                     JSONObject fields = hitJson.getJSONObject("fields");
+                     if (fields.has("_parent")) {
+                         parent = fields.getString("_parent");
+                    }
+                }
                 String sourceStr = hitJson.getString("_source");
                 byte[] source = sourceStr.getBytes("UTF-8");
                 if (withVersion && hitJson.has("_version"))
                     version = hitJson.getLong("_version");
                 bytes += source.length;
-                MySearchHitJson res = new MySearchHitJson(id, source, version);
+                MySearchHitJson res = new MySearchHitJson(id, parent, source, version);
                 bufferedHits.add(res);
             }
             return bufferedHits.size();
@@ -153,17 +162,23 @@ public class MySearchResponseJson implements MySearchResponse {
     class MySearchHitJson implements MySearchHit {
 
         String id;
+        String parent;
         byte[] source;
         long version;
 
-        public MySearchHitJson(String id, byte[] source, long version) {
+        public MySearchHitJson(String id, String parent, byte[] source, long version) {
             this.id = id;
+            this.parent = parent;
             this.source = source;
             this.version = version;
         }
 
         @Override public String id() {
             return id;
+        }
+
+        @Override public String parent() {
+            return parent;
         }
 
         @Override public long version() {

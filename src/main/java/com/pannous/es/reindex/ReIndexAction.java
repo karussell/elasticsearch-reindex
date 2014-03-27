@@ -117,6 +117,8 @@ public class ReIndexAction extends BaseRestHandler {
                 setVersion(withVersion).
                 setSize(hitsPerPage).
                 setSearchType(SearchType.SCAN).
+                addField("_source").
+                addField("_parent").
                 setScroll(TimeValue.timeValueMinutes(keepTimeInMinutes));
 
         if (filter != null && !filter.trim().isEmpty())
@@ -180,7 +182,9 @@ public class ReIndexAction extends BaseRestHandler {
                 IndexRequest indexReq = Requests.indexRequest(indexName).type(newType).id(hit.id()).source(hit.source());
                 if (withVersion)
                     indexReq.version(hit.version());
-
+                if (hit.parent() != null && !hit.parent().isEmpty()) {
+                    indexReq.parent(hit.parent());
+                }
                 brb.add(indexReq);
             } catch (Exception ex) {
                 logger.warn("Cannot add object:" + hit + " to bulkIndexing action." + ex.getMessage());
