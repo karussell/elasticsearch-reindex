@@ -42,8 +42,7 @@ you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh
 >  { "term" : { "count" : 2 } }'
 
 This refeeds all documents in index 'indexold' with type 'typeold' into the index 'indexnew' with type 'typenew'.
-But only documents matching the specified filter will be refeeded. The internal Java API will be used which should
-should be efficient.
+But only documents matching the specified filter will be refeeded. The internal Java API will be used which should be efficient.
 
 ## Different cluster 
 
