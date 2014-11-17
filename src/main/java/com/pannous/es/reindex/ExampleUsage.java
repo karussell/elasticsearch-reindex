@@ -81,12 +81,12 @@ public class ExampleUsage {
         };
         // first query, further scroll-queries in reindex!
         SearchRequestBuilder srb = action.createScrollSearch(searchIndexName, searchType, filter,
-                hitsPerPage, withVersion, keepTimeInMinutes);
+                hitsPerPage, withVersion, keepTimeInMinutes, client);
         SearchResponse sr = srb.execute().actionGet();
         MySearchResponse rsp = new MySearchResponseES(client, sr, keepTimeInMinutes);
 
         // now feed and call callback
-        action.reindex(rsp, newIndexName, newType, withVersion, waitInSeconds);
+        action.reindex(rsp, newIndexName, newType, withVersion, waitInSeconds, client);
 
         client.close();
     }

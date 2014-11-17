@@ -13,7 +13,7 @@
     <properties>
         <maven.compiler.target>1.6</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch.version>1.0.0</elasticsearch.version>
+        <elasticsearch.version>1.4.0</elasticsearch.version>
     </properties>
 
     <dependencies>

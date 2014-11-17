@@ -63,7 +63,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         refresh("oldtweets");
         assertThat(count("oldtweets"), equalTo(2L));
 
-        int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false, 0);
+        int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false, 0, client);
         assertThat(res, equalTo(2));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(2L));
@@ -81,7 +81,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         add("oldtweets", "tweet", null, "{ \"name\" : \"peter test\", \"count\" : 2}");
         refresh("oldtweets");
         assertThat(count("oldtweets"), equalTo(2L));
-        int res = action.reindex(scrollSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }"), "tweets", "tweet", false, 0);
+        int res = action.reindex(scrollSearch("oldtweets", "tweet", "{ \"term\": { \"count\" : 2} }"), "tweets", "tweet", false, 0, client);
         assertThat(res, equalTo(1));
         refresh("tweets");
         assertThat(count("tweets"), equalTo(1L));
@@ -98,7 +98,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
          refresh("oldtweets");
          assertThat(count("oldtweets"), equalTo(2L));
 
-         int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false, 0);
+         int res = action.reindex(scrollSearch("oldtweets", "tweet", ""), "tweets", "tweet", false, 0, client);
          assertThat(res, equalTo(1));
          refresh("tweets");
          assertThat(count("tweets"), equalTo(1L));
@@ -106,7 +106,7 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
          // update the mapping settings for oldtweets childs (i.e retweet type)
          client.admin().indices().preparePutMapping().setIndices("tweets").setType("retweet").setSource("{\"retweet\": { \"_parent\": { \"type\": \"tweet\" }, \"_routing\": { \"required\": true }, \"properties\": { \"name\": { \"type\": \"string\" }, \"count\": { \"type\": \"long\" } } }}").execute().actionGet();
 
-         res = action.reindex(scrollSearch("oldtweets", "retweet", ""), "tweets", "retweet", false, 0);
+         res = action.reindex(scrollSearch("oldtweets", "retweet", ""), "tweets", "retweet", false, 0, client);
          assertThat(res, equalTo(1));
          refresh("tweets");
          assertThat(count("tweets"), equalTo(2L));
