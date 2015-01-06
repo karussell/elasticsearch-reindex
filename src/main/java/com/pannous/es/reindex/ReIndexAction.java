@@ -30,7 +30,7 @@ import static org.elasticsearch.rest.RestStatus.*;
 public class ReIndexAction extends BaseRestHandler {
 
     @Inject public ReIndexAction(Settings settings, Client client, RestController controller) {
-        super(settings, controller, client);
+        super(settings, client);
 
         if (controller != null) {
             // Define REST endpoints to do a reindex

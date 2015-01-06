@@ -31,7 +31,7 @@ public class ReIndexWithCreate extends BaseRestHandler {
     private ReIndexAction reindexAction;
 
     @Inject public ReIndexWithCreate(Settings settings, Client client, RestController controller) {
-        super(settings, controller, client);
+        super(settings, client);
 
         // Define REST endpoints to do a reindex
         controller.registerHandler(PUT, "/_reindex", this);
