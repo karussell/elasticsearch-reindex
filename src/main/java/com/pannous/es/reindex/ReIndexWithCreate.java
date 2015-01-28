@@ -22,6 +22,7 @@ import java.io.IOException;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 import static org.elasticsearch.rest.RestStatus.OK;
+import java.util.*;
 
 /**
  * @author Peter Karich
@@ -31,10 +32,10 @@ public class ReIndexWithCreate extends BaseRestHandler {
     private ReIndexAction reindexAction;
 
     @Inject public ReIndexWithCreate(Settings settings, Client client, RestController controller) {
-        super(settings, controller, client);
+	super(settings, controller, client);
 
-        // Define REST endpoints to do a reindex
-        controller.registerHandler(PUT, "/_reindex", this);
+	// Define REST endpoints to do a reindex
+	controller.registerHandler(PUT, "/_reindex", this);
         controller.registerHandler(POST, "/_reindex", this);
 
         // give null controller as argument to avoid registering twice
@@ -55,12 +56,21 @@ public class ReIndexWithCreate extends BaseRestHandler {
             if (type.isEmpty()) {
                 channel.sendResponse(new BytesRestResponse(RestStatus.EXPECTATION_FAILED, "parameter type missing"));
                 return;
-            }
+	    }
             String searchIndexName = request.param("searchIndex");
             if (searchIndexName.isEmpty()) {
                 channel.sendResponse(new BytesRestResponse(RestStatus.EXPECTATION_FAILED, "parameter searchIndex missing"));
                 return;
+	    }
+
+	    String skipType = request.param("skipType", "");
+	    List<String>skipTypeList;
+	    if (!skipType.isEmpty()) {
+	      skipTypeList=Arrays.asList(skipType.trim().split(","));
+	    }else{
+	      skipTypeList = new ArrayList<String>();
             }
+
             int newShards = request.paramAsInt("newIndexShards", -1);
             try {
                 if(client.admin().indices().exists(new IndicesExistsRequest(newIndexName)).actionGet().isExists()) {
@@ -86,7 +96,11 @@ public class ReIndexWithCreate extends BaseRestHandler {
                 Settings searchIndexSettings = indexData.settings();
 
                 for(ObjectCursor<String> mapKeyCursor : indexData.mappings().keys()) {
-                    reindexAction.handleRequest(request, channel, mapKeyCursor.value, true, client);
+		  if (skipTypeList.contains(mapKeyCursor.value)) {
+		    logger.info("Skip type [{}]", mapKeyCursor.value);
+		    continue;
+		  }
+		  reindexAction.handleRequest(request, channel, mapKeyCursor.value, true, client);
                 }
             }
             else {
