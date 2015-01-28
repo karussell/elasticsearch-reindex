@@ -4,16 +4,16 @@
 
     <groupId>com.pannous.es</groupId>
     <artifactId>reindex</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.4.1</version>
     <packaging>jar</packaging>
 
     <name>Reindex Plugin</name>
     <url>http://maven.apache.org</url>
 
     <properties>
-        <maven.compiler.target>1.6</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <elasticsearch.version>1.4.0</elasticsearch.version>
+	<maven.compiler.target>1.6</maven.compiler.target>
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<elasticsearch.version>1.4.0</elasticsearch.version>
     </properties>
 
     <dependencies>
@@ -67,7 +67,7 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.3</version>
                 <configuration>
-                    <finalName>elasticsearch-${project.artifactId}-${elasticsearch.version}</finalName>
+		    <finalName>elasticsearch-${project.artifactId}-${project.version}</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
                     <outputDirectory>${project.build.directory}/</outputDirectory>
                     <descriptors>
