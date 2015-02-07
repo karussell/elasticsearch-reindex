@@ -172,6 +172,11 @@ public class ReIndexWithCreate extends BaseRestHandler {
     private void copyAliases(RestRequest request, Client client) {
         String index = request.param("index");
         String searchIndexName = request.param("searchIndex");
+        boolean aliasIncludeIndex = request.paramAsBoolean("addOldIndexAsAlias", false);
+        copyAliases(index, searchIndexName, aliasIncludeIndex, client);
+    }
+
+    private void copyAliases(String index, String searchIndexName, Boolean aliasIncludeIndex, Client client) {
         IndexMetaData meta = client.admin().cluster().state(new ClusterStateRequest()).
                 actionGet().getState().metaData().index(searchIndexName);
         IndicesAliasesRequest aReq = new IndicesAliasesRequest();
@@ -179,17 +184,16 @@ public class ReIndexWithCreate extends BaseRestHandler {
         if(meta != null && meta.aliases() != null) {
             for (ObjectCursor<String> oldAliasCursor : meta.aliases().keys() ) {
                 empty = false;
-                aReq.addAlias(index, oldAliasCursor.value);
+                aReq.addAlias(oldAliasCursor.value, index);
             }
         }
-        boolean aliasIncludeIndex = request.paramAsBoolean("addOldIndexAsAlias", false);
         if (aliasIncludeIndex) {
             if (client.admin().indices().exists(new IndicesExistsRequest(searchIndexName)).actionGet().isExists()) {
                 logger.warn("Cannot add old index name (" + searchIndexName + ") as alias to index "
                         + index + " - as old index still exists");
             }
             else {
-                aReq.addAlias(index, searchIndexName);
+                aReq.addAlias(searchIndexName, index);
                 empty = false;
             }
         }

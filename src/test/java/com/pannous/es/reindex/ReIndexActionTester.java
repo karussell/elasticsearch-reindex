@@ -1,5 +1,7 @@
 package com.pannous.es.reindex;
 
+import org.elasticsearch.action.admin.cluster.state.ClusterStateRequest;
+import org.elasticsearch.action.admin.indices.alias.IndicesAliasesRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.count.CountRequest;
@@ -7,6 +9,8 @@ import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.IndexMetaData;
+import org.elasticsearch.common.hppc.cursors.ObjectCursor;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -21,6 +25,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import org.json.JSONObject;
 import org.testng.annotations.BeforeMethod;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This test will be called from the ElasticSearch and from the 'JSON'
@@ -122,6 +130,29 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
         assertThat(child_sr.getHits().hits().length, equalTo(1));
     }
 
+    @Test public void copyAliases() throws Exception {
+        add("oldtweets", "tweet", null, "{ \"name\" : \"hello world\", \"count\" : 1}");
+        add("tweets", "tweet", null, "{ \"name\" : \"peter ä test\", \"count\" : 2}");
+        IndicesAliasesRequest aReq = new IndicesAliasesRequest();
+        aReq.addAlias("myalias", "oldtweets");
+        client.admin().indices().aliases(aReq).actionGet();
+        refresh("oldtweets");
+        refresh("tweets");
+        List<String> oldAliases = getAliasesNames("oldtweets");
+        assertThat(oldAliases.size(), equalTo(1));
+        assertThat(oldAliases.get(0), equalTo("myalias"));
+
+        Settings emptySettings = ImmutableSettings.settingsBuilder().build();
+        RestController contrl = new RestController(emptySettings);
+        ReIndexWithCreate action = new ReIndexWithCreate(emptySettings, client, contrl);
+
+        Method copyAliases = action.getClass().getDeclaredMethod("copyAliases", String.class, String.class, Boolean.class, Client.class);
+        copyAliases.setAccessible(true);
+        copyAliases.invoke(action, "tweets", "oldtweets", false, client);
+        List<String> createdAliases = getAliasesNames("tweets");
+        assertThat(oldAliases, equalTo(createdAliases));
+    }
+
     private String add(String index, String type, String routing, String json) {
         IndexRequestBuilder req =  client.prepareIndex(index, type).setSource(json);
         if (routing != null) 
@@ -133,6 +164,18 @@ public abstract class ReIndexActionTester extends AbstractNodesTests {
 
     private void refresh(String index) {
         client.admin().indices().refresh(new RefreshRequest(index)).actionGet();
+    }
+
+    private List<String> getAliasesNames(String index) {
+        IndexMetaData meta = client.admin().cluster().state(new ClusterStateRequest()).
+                actionGet().getState().metaData().index(index);
+        List<String> aliases = new ArrayList<String>();
+        if(meta != null && meta.aliases() != null) {
+            for (ObjectCursor<String> oldAliasCursor : meta.aliases().keys()) {
+                aliases.add(oldAliasCursor.value);
+            }
+        }
+        return aliases;
     }
 
     private long count(String index) {
