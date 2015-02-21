@@ -46,6 +46,7 @@ Note: This script will build and install the plugin assuming elasticsearch is fo
 
 This refeeds all documents in index 'indexold' with type 'typeold' into the index 'indexnew' with type 'typenew'.
 But only documents matching the specified filter will be refeeded. The internal Java API will be used which should be efficient.
+In this case, the term filter is used to limit the documents that will be reindexed, you can leave out the filter to copy all documents to the new index.
 
 ## Same cluster with create index api
 > curl -XPUT 'http://localhost:9200/_reindex?index=indexnew&type=*&searchIndex=indexold'
