@@ -19,6 +19,9 @@ Apache License 2.0
 
 you should see 'loaded [reindex], sites []' in the logs. Or use the reinstall.sh script for development purposes. Be sure to use elasticsearch 1.4.0. For newer versions - please provide pull requests ;)
 
+Note: This script will build and install the plugin assuming elasticsearch is found in `/usr/share/elasticsearch`. The script will call 'sudo' on the install part, so the script should be run as a user with sudo privileges. Since maven will be used to build the plugin, it requires maven to be installed, which can be installed with the command below on a debian/ubuntu system. 
+
+> sudo apt-get install maven2
 
 # Deinstallation
 
